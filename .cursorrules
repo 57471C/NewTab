@@ -1,0 +1,38 @@
+# SYSTEM ENVIRONMENT RULES FOR WINDOWS CLI EXECUTIONS
+
+[CRITICAL DIRECTIVE]
+The workspace environment is operating on a Windows machine. When invoking background terminal commands, shell utilities, or compilers (like node, npx, cargo, biome, etc.), you must NEVER supply absolute disk paths, drive letters (e.g., C:\...), or string-escaped backslashes to execution targets or working directory configurations. Absolute paths break terminal parsing buffers.
+
+[TERMINAL TARGETING MANDATE]
+1. Always force execution locally using relative path dot notation.
+2. If you need to run the project linter, formatting sweeps, or check syntax issues, you must exclusively run this command string:
+   npx biome check . --colors=off
+3. Do not append absolute folder parameters or attempt to run permissions sweeps. Run tasks directly out of the active local path root.
+
+# NEWTAB BROWSER EXTENSION RULES
+
+## Architectural Constraints
+- This is a local-first browser extension application. 
+- NEVER suggest cloud databases, backend servers, or external cloud storage integrations (e.g., Supabase, Postgres servers).
+- All storage must happen locally via Dexie.js (IndexedDB) or browser-native 'chrome.storage.local'.
+- You must strictly respect the chosen tech stack: Vite, React, TypeScript, Tailwind CSS, Dexie.js, and Lucide React.
+- Do not build or imply any user authentication servers. The "user" is defined strictly by the current browser session.
+
+## Code Quality & Tooling
+- Use Biome exclusively for linting and formatting. Do not introduce ESLint or Prettier packages/rules.
+- DO NOT EDIT biome.json EVER 
+- Rely on Tailwind CSS utility classes natively. Follow the layout architecture defined below.
+
+## Methodology & Safety Protocols
+- Do NOT rush into generating feature code blocks. 
+- Before writing any script, provide a concise list of steps for review.
+- Always check the latest developer documentation for structural configuration or package changes. Do not suggest deprecated command setups (such as old CLI init steps).
+- API keys must always remain client-side and secure. Store keys strictly within browser-native storage structures. Never allow plain-text hardcoding or network extraction.
+
+## UI & Animation Intent
+- Keep the user interface completely sparse, minimal, and modern (similar to Perplexity or Grok).
+- Focus on smooth, micro-interactions using standard Tailwind transition variables (`transition-all duration-300 ease-in-out`).
+
+## Interaction Paradigm
+- If a compilation or local terminal runtime error occurs, do not try to guess a blind solution. Ask for the direct console output or log files.
+- Ensure that unhandled logical or database exceptions capture and pipe their source reasons into standard browser `console.error` loops for transparent testing.
