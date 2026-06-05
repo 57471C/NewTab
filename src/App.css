@@ -1,3 +1,17 @@
 @import "tailwindcss";
 
 /* Base application overrides can be placed here */
+
+@theme {
+	--animate-slide-down: slide-down 0.3s ease-out forwards;
+	@keyframes slide-down {
+		0% {
+			top: -2rem;
+			opacity: 0;
+		}
+		100% {
+			top: 1.5rem;
+			opacity: 1;
+		}
+	}
+}
