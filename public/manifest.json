@@ -1,0 +1,13 @@
+{
+	"manifest_version": 3,
+	"name": "NewTab Assistant",
+	"version": "1.0.0",
+	"description": "A minimalist, local-first browser tab launcher and streaming AI companion.",
+	"chrome_url_overrides": {
+		"newtab": "index.html"
+	},
+	"permissions": ["storage"],
+	"content_security_policy": {
+		"extension_pages": "script-src 'self'; object-src 'self'; connect-src https://* wss://*;"
+	}
+}

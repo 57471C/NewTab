@@ -1,9 +1,11 @@
 import { Grid, History, Moon, Settings, Sparkles, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import LinkGrid from "./components/LinkGrid";
 import SettingsModal from "./components/SettingsModal";
 import Toast from "./components/Toast";
 import type { ShortcutLink } from "./lib/types";
+import { db, saveShortcut, reorderShortcuts } from "./lib/db";
 
 function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -16,29 +18,23 @@ function App() {
 	const toastTimeoutRef = useRef<number | null>(null);
 
 	// Core Link Storage Layer
-	const [links, setLinks] = useState<ShortcutLink[]>(() => {
-		const stored = localStorage.getItem("newtab_shortcuts");
-		if (stored) {
-			try {
-				const parsed = JSON.parse(stored);
-				return parsed.sort(
-					(a: ShortcutLink, b: ShortcutLink) => a.index - b.index,
-				);
-			} catch {
-				// Fallback to default if parsing fails
-			}
-		}
-		return Array.from({ length: 8 }, (_, i) => ({
-			id: `slot-${i}`,
-			title: "Add Link",
-			url: "",
-			index: i,
-		}));
-	});
+	const rawLinks = useLiveQuery(() =>
+		db.shortcuts.orderBy("slotIndex").toArray(),
+	);
 
-	useEffect(() => {
-		localStorage.setItem("newtab_shortcuts", JSON.stringify(links));
-	}, [links]);
+	const links: ShortcutLink[] = rawLinks
+		? rawLinks.map((link) => ({
+				id: String(link.id),
+				title: link.title,
+				url: link.url,
+				index: link.slotIndex,
+			}))
+		: Array.from({ length: 8 }, (_, i) => ({
+				id: `placeholder-${i}`,
+				title: "Add Link",
+				url: "",
+				index: i,
+			}));
 
 	const showToast = (type: "success" | "error", message: string) => {
 		setToast({ type, message });
@@ -46,29 +42,35 @@ function App() {
 		toastTimeoutRef.current = window.setTimeout(() => setToast(null), 3000);
 	};
 
-	const updateShortcut = (index: number, title: string, url: string) => {
-		setLinks((prev) => {
-			const next = prev.map((item) =>
-				item.index === index ? { ...item, title, url } : item,
-			);
-			localStorage.setItem("newtab_shortcuts", JSON.stringify(next));
-			return next;
-		});
-		showToast(
-			"success",
-			!url && !title ? "Link slot cleared." : "Link slot updated successfully.",
-		);
+	const updateShortcutInDB = async (
+		slotIndex: number,
+		title: string,
+		url: string,
+	) => {
+		const formattedUrl = url.trim();
+		if (formattedUrl !== "") {
+			try {
+				new URL(
+					formattedUrl.includes("://")
+						? formattedUrl
+						: `https://${formattedUrl}`,
+				);
+			} catch {
+				showToast("error", "Please enter a valid URL format.");
+				return;
+			}
+		}
+
+		try {
+			await saveShortcut(slotIndex, title, formattedUrl);
+			showToast("success", "Shortcut successfully updated.");
+		} catch (error) {
+			showToast("error", "Failed to update shortcut.");
+		}
 	};
 
-	const reorderLinks = (sourceIndex: number, targetIndex: number) => {
-		setLinks((prev) => {
-			const next = [...prev];
-			const [moved] = next.splice(sourceIndex, 1);
-			next.splice(targetIndex, 0, moved);
-			const reordered = next.map((item, i) => ({ ...item, index: i }));
-			localStorage.setItem("newtab_shortcuts", JSON.stringify(reordered));
-			return reordered;
-		});
+	const reorderLinks = async (sourceIndex: number, targetIndex: number) => {
+		await reorderShortcuts(sourceIndex, targetIndex);
 	};
 
 	// Apply the dark mode class token to the HTML root
@@ -161,7 +163,7 @@ function App() {
 				isOpen={isSettingsOpen}
 				onClose={() => setIsSettingsOpen(false)}
 				links={links}
-				onUpdateShortcut={updateShortcut}
+				onUpdateShortcut={updateShortcutInDB}
 				showToast={showToast}
 			/>
 		</div>
