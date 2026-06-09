@@ -27,6 +27,7 @@
 		}
 	},
 	"javascript": {
+		"globals": ["chrome"],
 		"formatter": {
 			"quoteStyle": "double"
 		}

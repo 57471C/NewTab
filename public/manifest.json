@@ -3,11 +3,24 @@
 	"name": "NewTab Assistant",
 	"version": "1.0.0",
 	"description": "A minimalist, local-first browser tab launcher and streaming AI companion.",
+	"permissions": ["storage", "scripting", "activeTab", "favicon"],
+	"background": {
+		"service_worker": "background.js"
+	},
+	"action": {},
+	"commands": {
+		"_execute_action": {
+			"suggested_key": {
+				"default": "Alt+Shift+D",
+				"mac": "MacCtrl+Shift+D"
+			},
+			"description": "Toggle Intelligent Media-Shielding Dark Mode Canvas"
+		}
+	},
 	"chrome_url_overrides": {
 		"newtab": "index.html"
 	},
-	"permissions": ["storage"],
 	"content_security_policy": {
-		"extension_pages": "script-src 'self'; object-src 'self'; connect-src https://* wss://*;"
+		"extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.x.ai http://localhost:11434;"
 	}
 }
