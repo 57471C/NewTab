@@ -49,20 +49,31 @@ export default function LinkGrid({
 		}
 	};
 
+	const sanitizeUrl = (url?: string) => {
+		if (!url) return "#";
+		const trimmed = url.trim().toLowerCase();
+		if (trimmed.startsWith("javascript:") || trimmed.startsWith("data:")) {
+			return "#";
+		}
+		return url;
+	};
+
 	return (
 		<div className="mx-auto grid w-full max-w-3xl grid-cols-4 gap-4 px-4 py-8">
 			{links.map((link, i) => {
 				const isDragging = draggedIndex === i;
-				const domain = getDomain(link.url);
+				const domain = getDomain(link.url || "");
 				const faviconUrl = domain
 					? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
 					: "";
 
+				const safeUrl = sanitizeUrl(link.url);
+
 				return (
 					<a
 						key={link.id}
-						href={link.url || "#"}
-						target={link.url ? "_blank" : "_self"}
+						href={safeUrl}
+						target={safeUrl !== "#" ? "_blank" : "_self"}
 						rel="noreferrer"
 						draggable={true}
 						onDragStart={(e) => handleDragStart(e, i)}

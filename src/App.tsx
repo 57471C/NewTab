@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import geminiLogo from "./assets/gemini.svg";
 import claudeLogo from "./assets/claude.svg";
-import chatgptLogo from "./assets/chatgpt.svg";
+import chatgptLogo from "./assets/ChatGPT.svg";
 import grokLogo from "./assets/grok.svg";
 import LinkGrid from "./components/LinkGrid";
 import SettingsModal from "./components/SettingsModal";
