@@ -3,8 +3,10 @@
 /**
  * Secure vault for persisting API Keys.
  * Defaults to the sandboxed chrome.storage.local when running as an extension,
- * with a fallback to localStorage for standard browser debugging.
+ * with a fallback to memory for standard browser debugging.
  */
+const memoryVault = new Map<string, string>();
+
 export const vault = {
 	async get(provider: string): Promise<string | null> {
 		if (typeof chrome !== "undefined" && chrome.storage) {
@@ -16,7 +18,7 @@ export const vault = {
 				return null;
 			}
 		}
-		return Promise.resolve(localStorage.getItem(`vault_${provider}`));
+		return Promise.resolve(memoryVault.get(provider) || null);
 	},
 	async set(provider: string, key: string): Promise<void> {
 		if (typeof chrome !== "undefined" && chrome.storage) {
@@ -27,7 +29,7 @@ export const vault = {
 			}
 			return;
 		}
-		localStorage.setItem(`vault_${provider}`, key);
+		memoryVault.set(provider, key);
 		return Promise.resolve();
 	},
 };
