@@ -82,12 +82,12 @@ export async function reorderShortcuts(
 		all.splice(targetIndex, 0, moved);
 
 		// Temporarily assign negative indices to avoid unique constraint violations during shifts
-		for (let i = 0; i < all.length; i++) {
-			await db.shortcuts.update(all[i].id!, { slotIndex: -1 - i });
-		}
+		await db.shortcuts.bulkPut(
+			all.map((item, index) => ({ ...item, slotIndex: -1 - index })),
+		);
 		// Now set the correct target indices matching the 0-7 slot layout
-		for (let i = 0; i < all.length; i++) {
-			await db.shortcuts.update(all[i].id!, { slotIndex: i });
-		}
+		await db.shortcuts.bulkPut(
+			all.map((item, index) => ({ ...item, slotIndex: index })),
+		);
 	});
 }
