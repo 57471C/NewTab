@@ -26,6 +26,7 @@ import Toast from "./components/Toast";
 import { db, reorderShortcuts, saveShortcut } from "./lib/db";
 import type { ShortcutLink } from "./lib/types";
 import { useStreamingChat } from "./hooks/useStreamingChat";
+import { useChatSessions } from "./hooks/useChatSessions";
 
 function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -83,33 +84,7 @@ function App() {
 		}
 	};
 
-	const chatSessions = useLiveQuery(async () => {
-		const messages = await db.messages.orderBy("timestamp").toArray();
-		const sessions = new Map<
-			string,
-			{ id: string; title: string; timestamp: number }
-		>();
-
-		for (const msg of messages) {
-			const existing = sessions.get(msg.chatId);
-			if (!existing) {
-				sessions.set(msg.chatId, {
-					id: msg.chatId,
-					title: msg.role === "user" ? msg.content : "New Conversation",
-					timestamp: msg.timestamp,
-				});
-			} else {
-				if (msg.role === "user" && existing.title === "New Conversation") {
-					existing.title = msg.content;
-				}
-				existing.timestamp = Math.max(existing.timestamp, msg.timestamp);
-			}
-		}
-
-		return Array.from(sessions.values()).sort(
-			(a, b) => b.timestamp - a.timestamp,
-		);
-	}, []);
+	const chatSessions = useChatSessions();
 
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
