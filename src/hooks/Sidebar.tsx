@@ -1,7 +1,6 @@
-import { useLiveQuery } from "dexie-react-hooks";
 import { Menu, MessageSquare, Plus, Settings, X } from "lucide-react";
 import { useState } from "react";
-import { db } from "../lib/db";
+import { useChatSessions } from "./useChatSessions";
 
 interface SidebarProps {
 	activeChatId: string | null;
@@ -18,33 +17,7 @@ export default function Sidebar({
 }: SidebarProps) {
 	const [isOpen, setIsOpen] = useState(false);
 
-	const chatSessions = useLiveQuery(async () => {
-		const messages = await db.messages.orderBy("timestamp").toArray();
-		const sessions = new Map<
-			string,
-			{ id: string; title: string; timestamp: number }
-		>();
-
-		for (const msg of messages) {
-			const existing = sessions.get(msg.chatId);
-			if (!existing) {
-				sessions.set(msg.chatId, {
-					id: msg.chatId,
-					title: msg.role === "user" ? msg.content : "New Conversation",
-					timestamp: msg.timestamp,
-				});
-			} else {
-				if (msg.role === "user" && existing.title === "New Conversation") {
-					existing.title = msg.content;
-				}
-				existing.timestamp = msg.timestamp;
-			}
-		}
-
-		return Array.from(sessions.values()).sort(
-			(a, b) => b.timestamp - a.timestamp,
-		);
-	}, []);
+	const chatSessions = useChatSessions();
 
 	return (
 		<>
