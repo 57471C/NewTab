@@ -11,9 +11,10 @@ export function useStreamingChat() {
 		chatId = "default",
 	) => {
 		setIsStreaming(true);
+		let apiKey: string | null = null;
 		try {
 			const provider = model.startsWith("grok") ? "Grok" : model;
-			const apiKey = await vault.get(provider);
+			apiKey = await vault.get(provider);
 			if (!apiKey) {
 				throw new Error(
 					`API key for ${model} is missing. Please configure it in settings.`,
@@ -164,12 +165,27 @@ export function useStreamingChat() {
 				}
 			}
 		} catch (error: unknown) {
-			console.error("Chat streaming error:", error);
+			let errorMessage =
+				error instanceof Error ? error.message : "Unknown failure";
+
+			if (apiKey) {
+				errorMessage = errorMessage.split(apiKey).join("[REDACTED]");
+			}
+
+			let errorLog = error;
+			if (error instanceof Error && apiKey) {
+				const sanitizedError = new Error(errorMessage);
+				sanitizedError.stack = error.stack?.split(apiKey).join("[REDACTED]");
+				errorLog = sanitizedError;
+			} else if (typeof error === 'string' && apiKey) {
+				errorLog = error.split(apiKey).join("[REDACTED]");
+			}
+			console.error("Chat streaming error:", errorLog);
 			// biome-ignore lint/suspicious/noExplicitAny: the agent says it needs to be this way for dynamic DB access, pending schema update
 			const database = db as any;
 			await database.messages.add({
 				role: "system",
-				content: `Error: ${error instanceof Error ? error.message : "Unknown failure"}`,
+				content: `Error: ${errorMessage}`,
 				timestamp: Date.now(),
 			});
 		} finally {
