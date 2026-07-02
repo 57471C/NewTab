@@ -64,7 +64,6 @@ export function useStreamingChat() {
 				endpoint = "https://api.anthropic.com/v1/messages";
 				headers["x-api-key"] = apiKey;
 				headers["anthropic-version"] = "2023-06-01";
-				headers["anthropic-dangerous-direct-browser-access"] = "true";
 				payload = {
 					model: "claude-3-5-sonnet-latest",
 					stream: true,
@@ -78,28 +77,10 @@ export function useStreamingChat() {
 				};
 			}
 
-			const response = await fetch(endpoint, {
-				method: "POST",
-				headers,
-				body: JSON.stringify(payload),
-			});
-
-			if (!response.ok) {
-				const errorTxt = await response.text();
-				throw new Error(`API Error: ${response.status} - ${errorTxt}`);
-			}
-
-			const reader = response.body?.getReader();
-			if (!reader) throw new Error("No response body");
-
-			const decoder = new TextDecoder("utf-8");
 			let assistantContent = "";
+			const decoder = new TextDecoder("utf-8");
 
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				const chunk = decoder.decode(value, { stream: true });
+			const processChunk = async (chunk: string) => {
 				const lines = chunk.split("\n");
 
 				for (const line of lines) {
@@ -128,6 +109,58 @@ export function useStreamingChat() {
 							// Discard incomplete JSON fragments across stream chunks
 						}
 					}
+				}
+			};
+
+			if (
+				model === "Claude" &&
+				typeof chrome !== "undefined" &&
+				chrome.runtime
+			) {
+				await new Promise<void>((resolve, reject) => {
+					const port = chrome.runtime.connect({ name: "anthropic-proxy" });
+					port.postMessage({
+						action: "stream",
+						endpoint,
+						headers,
+						body: JSON.stringify(payload),
+					});
+
+					port.onMessage.addListener(async (msg) => {
+						if (msg.type === "error") {
+							reject(new Error(msg.error));
+							port.disconnect();
+						} else if (msg.type === "chunk") {
+							await processChunk(msg.value);
+						} else if (msg.type === "done") {
+							resolve();
+						}
+					});
+
+					port.onDisconnect.addListener(() => {
+						resolve();
+					});
+				});
+			} else {
+				const response = await fetch(endpoint, {
+					method: "POST",
+					headers,
+					body: JSON.stringify(payload),
+				});
+
+				if (!response.ok) {
+					const errorTxt = await response.text();
+					throw new Error(`API Error: ${response.status} - ${errorTxt}`);
+				}
+
+				const reader = response.body?.getReader();
+				if (!reader) throw new Error("No response body");
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					const chunk = decoder.decode(value, { stream: true });
+					await processChunk(chunk);
 				}
 			}
 		} catch (error: unknown) {

@@ -75,6 +75,65 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 	chrome.tabs.onRemoved.addListener((tabId) => {
 		darkTabs.delete(tabId);
 	});
+
+	// Streaming proxy for background API fetches
+	chrome.runtime.onConnect.addListener((port) => {
+		if (port.name !== "anthropic-proxy") return;
+
+		port.onMessage.addListener(async (msg) => {
+			if (msg.action === "stream") {
+				try {
+					if (!msg.endpoint.startsWith("https://api.anthropic.com/")) {
+						throw new Error("Invalid endpoint");
+					}
+
+					const response = await fetch(msg.endpoint, {
+						method: "POST",
+						headers: msg.headers,
+						body: msg.body,
+					});
+
+					if (!response.ok) {
+						const errorTxt = await response.text();
+						port.postMessage({
+							type: "error",
+							error: `API Error: ${response.status} - ${errorTxt}`,
+						});
+						port.disconnect();
+						return;
+					}
+
+					const reader = response.body?.getReader();
+					if (!reader) {
+						port.postMessage({ type: "error", error: "No response body" });
+						port.disconnect();
+						return;
+					}
+
+					const decoder = new TextDecoder("utf-8");
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) {
+							port.postMessage({ type: "done" });
+							port.disconnect();
+							break;
+						}
+						// Decode chunk in background script for efficiency
+						port.postMessage({
+							type: "chunk",
+							value: decoder.decode(value, { stream: true }),
+						});
+					}
+				} catch (error) {
+					port.postMessage({
+						type: "error",
+						error: error instanceof Error ? error.message : "Unknown failure",
+					});
+					port.disconnect();
+				}
+			}
+		});
+	});
 } else {
 	console.warn(
 		"Extension action components not yet initialized in current runtime context.",
