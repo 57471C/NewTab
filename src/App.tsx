@@ -14,19 +14,19 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import reactLogo from "./assets/react.svg";
-import geminiLogo from "./assets/gemini.svg";
-import claudeLogo from "./assets/claude.svg";
 import chatgptLogo from "./assets/ChatGPT.svg";
+import claudeLogo from "./assets/claude.svg";
+import geminiLogo from "./assets/gemini.svg";
 import grokLogo from "./assets/grok.svg";
+import reactLogo from "./assets/react.svg";
+import ChatFeed from "./components/ChatFeed";
 import LinkGrid from "./components/LinkGrid";
 import SettingsModal from "./components/SettingsModal";
-import ChatFeed from "./components/ChatFeed";
 import Toast from "./components/Toast";
+import { useChatSessions } from "./hooks/useChatSessions";
+import { useStreamingChat } from "./hooks/useStreamingChat";
 import { db, reorderShortcuts, saveShortcut } from "./lib/db";
 import type { ShortcutLink } from "./lib/types";
-import { useStreamingChat } from "./hooks/useStreamingChat";
-import { useChatSessions } from "./hooks/useChatSessions";
 
 function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
