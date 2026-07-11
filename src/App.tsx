@@ -79,7 +79,7 @@ function App() {
 			if (activeChatId === id) {
 				handleNewChat();
 			}
-		} catch (error) {
+		} catch (_error) {
 			showToast("error", "Failed to delete chat.");
 		}
 	};
@@ -250,7 +250,7 @@ function App() {
 							onClick={() => setIsExpanded(!isExpanded)}
 						/>
 						{isExpanded && (
-							<div className="mt-2 flex flex-col gap-1 overflow-y-auto pl-8 pr-2">
+							<div className="mt-2 flex flex-col gap-1 overflow-y-auto pr-2 pl-8">
 								<button
 									type="button"
 									onClick={handleNewChat}

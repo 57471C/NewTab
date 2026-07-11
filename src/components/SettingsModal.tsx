@@ -24,7 +24,7 @@ export default function SettingsModal({
 
 	return (
 		<div
-			className="overflow-y-auto scrollbar-custom bg-zinc-950 text-zinc-200 h-full w-full fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+			className="scrollbar-custom fixed inset-0 z-50 flex h-full w-full items-center justify-center overflow-y-auto bg-black/50 bg-zinc-950 text-zinc-200"
 			style={{ colorScheme: "dark" }}
 			onClick={onClose}
 			onKeyDown={(e) => {
@@ -32,7 +32,7 @@ export default function SettingsModal({
 			}}
 		>
 			<div
-				className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-xl relative max-w-2xl w-full mx-4"
+				className="relative mx-4 w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl"
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => e.stopPropagation()}
 			>

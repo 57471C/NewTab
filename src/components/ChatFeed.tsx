@@ -12,7 +12,7 @@ function MessageFormatter({ content }: { content: string }) {
 	const blocks = content.split(/(```[\s\S]*?```)/g);
 
 	return (
-		<div className="text-sm leading-relaxed text-zinc-200">
+		<div className="text-sm text-zinc-200 leading-relaxed">
 			{blocks.map((block, i) => {
 				if (block.startsWith("```") && block.endsWith("```")) {
 					const match = block.match(/^```(\w*)\n?([\s\S]*?)```$/);
@@ -20,7 +20,7 @@ function MessageFormatter({ content }: { content: string }) {
 					return (
 						<div
 							key={`code-${i}`}
-							className="my-3 overflow-x-auto select-all rounded-xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-300"
+							className="my-3 select-all overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-300"
 						>
 							<pre>
 								<code>{code}</code>
@@ -75,7 +75,7 @@ export default function ChatFeed({ activeChatId, isStreaming }: ChatFeedProps) {
 		if (isAutoScroll && anchorRef.current) {
 			anchorRef.current.scrollIntoView({ behavior: "smooth" });
 		}
-	}, [messages, isStreaming, isAutoScroll]);
+	}, [isAutoScroll]);
 
 	if (!messages || messages.length === 0) {
 		return (

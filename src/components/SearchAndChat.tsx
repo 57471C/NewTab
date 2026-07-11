@@ -83,7 +83,7 @@ export default function SearchAndChat({
 		<div
 			className={`w-full px-4 transition-all duration-[350ms] ease-out ${
 				isChatActive
-					? "fixed bottom-8 left-0 right-0 z-50 mx-auto max-w-3xl"
+					? "fixed right-0 bottom-8 left-0 z-50 mx-auto max-w-3xl"
 					: "relative z-10 mx-auto max-w-2xl"
 			}`}
 		>
@@ -105,7 +105,7 @@ export default function SearchAndChat({
 				/>
 
 				{/* Bottom Row: Utility Bar Mapping */}
-				<div className="flex w-full items-center justify-between border-t border-zinc-800/40 pt-1.5">
+				<div className="flex w-full items-center justify-between border-zinc-800/40 border-t pt-1.5">
 					{/* Left Aligned Actions */}
 					<div className="flex items-center gap-2">
 						<button
@@ -119,7 +119,7 @@ export default function SearchAndChat({
 							<button
 								type="button"
 								onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-								className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-800/50 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:border-zinc-700"
+								className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-800/50 px-2.5 py-1 font-medium text-xs text-zinc-300 hover:border-zinc-700"
 							>
 								<Globe size={14} />
 								{ENGINES[engine].name}
@@ -152,7 +152,7 @@ export default function SearchAndChat({
 							<button
 								type="button"
 								onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-								className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-800/50 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:border-zinc-700"
+								className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-800/50 px-2.5 py-1 font-medium text-xs text-zinc-300 hover:border-zinc-700"
 							>
 								<Cpu size={14} />
 								Gemini
