@@ -33,7 +33,7 @@ export function BookmarkCard({ item }: { item: BookmarkItem }) {
 	return (
 		<a
 			href={sanitizeUrl(item.url)}
-			className="relative h-28 bg-zinc-900/40 hover:bg-zinc-900 border border-zinc-850 hover:border-zinc-700/80 rounded-xl p-3 flex flex-col justify-between group transition-all duration-200 cursor-pointer hover:-translate-y-0.5 shadow-sm"
+			className="group relative flex h-28 cursor-pointer flex-col justify-between rounded-xl border border-zinc-850 bg-zinc-900/40 p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-700/80 hover:bg-zinc-900"
 		>
 			{/* Top Row: Favicon with onError Fallback */}
 			<div className="relative z-10">
@@ -41,25 +41,25 @@ export function BookmarkCard({ item }: { item: BookmarkItem }) {
 					<img
 						src={faviconUrl}
 						alt=""
-						className="h-5 w-5 rounded-md filter grayscale opacity-70 group-hover:opacity-100 transition-opacity"
+						className="h-5 w-5 rounded-md opacity-70 grayscale filter transition-opacity group-hover:opacity-100"
 						onError={() => setImageFailed(true)}
 					/>
 				) : (
-					<div className="h-5 w-5 rounded-md bg-zinc-800 opacity-70 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+					<div className="flex h-5 w-5 items-center justify-center rounded-md bg-zinc-800 opacity-70 transition-opacity group-hover:opacity-100">
 						<div className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
 					</div>
 				)}
 			</div>
 
 			{/* The Middle: Monogram Mark */}
-			<div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-				<span className="text-5xl font-extralight text-zinc-800 opacity-25 group-hover:opacity-45 group-hover:scale-110 group-hover:text-zinc-600 transition-all duration-300 uppercase font-sans">
+			<div className="pointer-events-none absolute inset-0 flex select-none items-center justify-center overflow-hidden">
+				<span className="font-extralight font-sans text-5xl text-zinc-800 uppercase opacity-25 transition-all duration-300 group-hover:scale-110 group-hover:text-zinc-600 group-hover:opacity-45">
 					{item.title ? item.title.charAt(0) : "?"}
 				</span>
 			</div>
 
 			{/* Bottom Row: Site Name */}
-			<div className="text-xs font-medium text-zinc-400 group-hover:text-zinc-100 transition-colors truncate relative z-10">
+			<div className="relative z-10 truncate font-medium text-xs text-zinc-400 transition-colors group-hover:text-zinc-100">
 				{item.title}
 			</div>
 		</a>

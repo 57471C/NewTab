@@ -8,7 +8,7 @@ export default function Toast({
 	if (!toast) return null;
 
 	return (
-		<div className="fixed top-6 left-1/2 z-50 flex -translate-x-1/2 animate-slide-down items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 shadow-xl font-medium text-xs text-zinc-200">
+		<div className="fixed top-6 left-1/2 z-50 flex -translate-x-1/2 animate-slide-down items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 font-medium text-xs text-zinc-200 shadow-xl">
 			{toast.type === "success" ? (
 				<CheckCircle2 size={16} className="text-zinc-100" />
 			) : (

@@ -83,6 +83,7 @@ export function useStreamingChat() {
 
 			const processChunk = async (chunk: string) => {
 				const lines = chunk.split("\n");
+				let hasUpdates = false;
 
 				for (const line of lines) {
 					if (line.trim() === "" || line.includes("[DONE]")) continue;
@@ -102,14 +103,18 @@ export function useStreamingChat() {
 							}
 
 							assistantContent += token;
-							await database.messages.update(assistantMsgId, {
-								content: assistantContent,
-							});
+							hasUpdates = true;
 							// biome-ignore lint/correctness/noUnusedVariables: the agent insists this try/catch is necessary to handle partial JSON from stream chunks, pending a more robust streaming implementation
 						} catch (e) {
 							// Discard incomplete JSON fragments across stream chunks
 						}
 					}
+				}
+
+				if (hasUpdates) {
+					await database.messages.update(assistantMsgId, {
+						content: assistantContent,
+					});
 				}
 			};
 
@@ -177,7 +182,7 @@ export function useStreamingChat() {
 				const sanitizedError = new Error(errorMessage);
 				sanitizedError.stack = error.stack?.split(apiKey).join("[REDACTED]");
 				errorLog = sanitizedError;
-			} else if (typeof error === 'string' && apiKey) {
+			} else if (typeof error === "string" && apiKey) {
 				errorLog = error.split(apiKey).join("[REDACTED]");
 			}
 			console.error("Chat streaming error:", errorLog);

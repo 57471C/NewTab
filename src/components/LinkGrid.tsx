@@ -98,7 +98,7 @@ export default function LinkGrid({
 								<Plus size={24} className="text-zinc-700" />
 							)}
 						</div>
-						<span className="w-full truncate text-center text-xs font-medium text-zinc-300">
+						<span className="w-full truncate text-center font-medium text-xs text-zinc-300">
 							{link.title || "Add Link"}
 						</span>
 					</a>
