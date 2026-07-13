@@ -51,8 +51,16 @@ export default function LinkGrid({
 
 	const sanitizeUrl = (url?: string) => {
 		if (!url) return "#";
-		const trimmed = url.trim().toLowerCase();
-		if (trimmed.startsWith("javascript:") || trimmed.startsWith("data:")) {
+		const cleaned = url
+			// biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control chars to strip them
+			.replace(/[\x00-\x1F\x7F]/g, "")
+			.trim()
+			.toLowerCase();
+		if (
+			cleaned.startsWith("javascript:") ||
+			cleaned.startsWith("data:") ||
+			cleaned.startsWith("vbscript:")
+		) {
 			return "#";
 		}
 		return url;
