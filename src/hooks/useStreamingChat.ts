@@ -72,7 +72,8 @@ export function useStreamingChat() {
 					messages: [{ role: "user", content: prompt }],
 				};
 			} else if (model === "Gemini") {
-				endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+				endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse`;
+				headers["x-goog-api-key"] = apiKey;
 				payload = {
 					contents: [{ parts: [{ text: prompt }] }],
 				};
