@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Globe, Plus } from "lucide-react";
 import { useState } from "react";
 import type { ShortcutLink } from "../lib/types";
 
@@ -49,6 +49,50 @@ export default function LinkGrid({
 		}
 	};
 
+	const isPublicDomain = (hostname: string) => {
+		if (!hostname) return false;
+		const lowerHost = hostname.toLowerCase();
+
+		if (lowerHost === "localhost" || lowerHost.endsWith(".local")) {
+			return false;
+		}
+
+		// IPv4 checks
+		const ipv4Match = lowerHost.match(
+			/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
+		);
+		if (ipv4Match) {
+			const parts = ipv4Match.slice(1).map(Number);
+			if (
+				parts[0] === 10 ||
+				(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+				(parts[0] === 192 && parts[1] === 168) ||
+				parts[0] === 127 ||
+				(parts[0] === 169 && parts[1] === 254)
+			) {
+				return false;
+			}
+		}
+
+		// IPv6 checks
+		if (lowerHost.includes(":")) {
+			const ipv6 = lowerHost.replace(/^\[|\]$/g, "");
+			if (
+				ipv6 === "::1" ||
+				ipv6.startsWith("fc") ||
+				ipv6.startsWith("fd") ||
+				ipv6.startsWith("fe8") ||
+				ipv6.startsWith("fe9") ||
+				ipv6.startsWith("fea") ||
+				ipv6.startsWith("feb")
+			) {
+				return false;
+			}
+		}
+
+		return true;
+	};
+
 	const sanitizeUrl = (url?: string) => {
 		if (!url) return "#";
 		const cleaned = url
@@ -71,9 +115,10 @@ export default function LinkGrid({
 			{links.map((link, i) => {
 				const isDragging = draggedIndex === i;
 				const domain = getDomain(link.url || "");
-				const faviconUrl = domain
-					? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
-					: "";
+				const faviconUrl =
+					domain && isPublicDomain(domain)
+						? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+						: "";
 
 				const safeUrl = sanitizeUrl(link.url);
 
@@ -93,7 +138,7 @@ export default function LinkGrid({
 						}`}
 					>
 						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800 shadow-inner">
-							{link.url ? (
+							{faviconUrl ? (
 								<img
 									src={faviconUrl}
 									alt={link.title}
@@ -102,6 +147,8 @@ export default function LinkGrid({
 										(e.target as HTMLImageElement).style.display = "none";
 									}}
 								/>
+							) : link.url ? (
+								<Globe size={24} className="text-zinc-500" />
 							) : (
 								<Plus size={24} className="text-zinc-700" />
 							)}
