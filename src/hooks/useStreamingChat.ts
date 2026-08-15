@@ -21,18 +21,14 @@ export function useStreamingChat() {
 				);
 			}
 
-			// We bypass strict typing here temporarily to support dynamic DB injection
-			// biome-ignore lint/suspicious/noExplicitAny: Dexie schema might not be strictly typed locally yet
-			const database = db as any;
-
-			await database.messages.add({
+			await db.messages.add({
 				chatId,
 				role: "user",
 				content: prompt,
 				timestamp: Date.now(),
 			});
 
-			const assistantMsgId = await database.messages.add({
+			const assistantMsgId = await db.messages.add({
 				chatId,
 				role: "assistant",
 				content: "",
@@ -123,7 +119,7 @@ export function useStreamingChat() {
 							while (true) {
 								const currentContent = pendingContent;
 								try {
-									await database.messages.update(assistantMsgId, {
+									await db.messages.update(assistantMsgId, {
 										content: currentContent,
 									});
 								} catch (e) {
@@ -161,9 +157,9 @@ export function useStreamingChat() {
 							processChunk(msg.value);
 						} else if (msg.type === "done") {
 							await updatePromise;
-							const finalMsg = await database.messages.get(assistantMsgId);
+							const finalMsg = await db.messages.get(assistantMsgId);
 							if (finalMsg && pendingContent !== finalMsg.content) {
-								await database.messages.update(assistantMsgId, {
+								await db.messages.update(assistantMsgId, {
 									content: pendingContent,
 								});
 							}
@@ -197,9 +193,9 @@ export function useStreamingChat() {
 					processChunk(chunk);
 				}
 				await updatePromise;
-				const finalMsg = await database.messages.get(assistantMsgId);
+				const finalMsg = await db.messages.get(assistantMsgId);
 				if (finalMsg && pendingContent !== finalMsg.content) {
-					await database.messages.update(assistantMsgId, {
+					await db.messages.update(assistantMsgId, {
 						content: pendingContent,
 					});
 				}
@@ -221,9 +217,8 @@ export function useStreamingChat() {
 				errorLog = error.split(apiKey).join("[REDACTED]");
 			}
 			console.error("Chat streaming error:", errorLog);
-			// biome-ignore lint/suspicious/noExplicitAny: the agent says it needs to be this way for dynamic DB access, pending schema update
-			const database = db as any;
-			await database.messages.add({
+			await db.messages.add({
+				chatId,
 				role: "system",
 				content: `Error: ${errorMessage}`,
 				timestamp: Date.now(),
