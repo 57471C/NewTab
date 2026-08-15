@@ -80,9 +80,12 @@ export function useStreamingChat() {
 			}
 
 			let assistantContent = "";
+			let updatePromise = Promise.resolve();
+			let pendingContent = "";
+			let isUpdating = false;
 			const decoder = new TextDecoder("utf-8");
 
-			const processChunk = async (chunk: string) => {
+			const processChunk = (chunk: string) => {
 				const lines = chunk.split("\n");
 				let hasUpdates = false;
 
@@ -113,9 +116,26 @@ export function useStreamingChat() {
 				}
 
 				if (hasUpdates) {
-					await database.messages.update(assistantMsgId, {
-						content: assistantContent,
-					});
+					pendingContent = assistantContent;
+					if (!isUpdating) {
+						isUpdating = true;
+						updatePromise = updatePromise.then(async () => {
+							while (true) {
+								const currentContent = pendingContent;
+								try {
+									await database.messages.update(assistantMsgId, {
+										content: currentContent,
+									});
+								} catch (e) {
+									console.error("Stream DB write error:", e);
+								}
+								if (pendingContent === currentContent) {
+									isUpdating = false;
+									break;
+								}
+							}
+						});
+					}
 				}
 			};
 
@@ -138,8 +158,15 @@ export function useStreamingChat() {
 							reject(new Error(msg.error));
 							port.disconnect();
 						} else if (msg.type === "chunk") {
-							await processChunk(msg.value);
+							processChunk(msg.value);
 						} else if (msg.type === "done") {
+							await updatePromise;
+							const finalMsg = await database.messages.get(assistantMsgId);
+							if (finalMsg && pendingContent !== finalMsg.content) {
+								await database.messages.update(assistantMsgId, {
+									content: pendingContent,
+								});
+							}
 							resolve();
 						}
 					});
@@ -167,7 +194,14 @@ export function useStreamingChat() {
 					const { done, value } = await reader.read();
 					if (done) break;
 					const chunk = decoder.decode(value, { stream: true });
-					await processChunk(chunk);
+					processChunk(chunk);
+				}
+				await updatePromise;
+				const finalMsg = await database.messages.get(assistantMsgId);
+				if (finalMsg && pendingContent !== finalMsg.content) {
+					await database.messages.update(assistantMsgId, {
+						content: pendingContent,
+					});
 				}
 			}
 		} catch (error: unknown) {
