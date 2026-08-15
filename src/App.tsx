@@ -75,7 +75,10 @@ function App() {
 	const handleDeleteChat = async (e: React.MouseEvent, id: string) => {
 		e.stopPropagation();
 		try {
-			await db.messages.where("chatId").equals(id).delete();
+			await db.transaction("rw", db.messages, db.sessions, async () => {
+				await db.messages.where("chatId").equals(id).delete();
+				await db.sessions.delete(id);
+			});
 			if (activeChatId === id) {
 				handleNewChat();
 			}
