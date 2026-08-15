@@ -15,16 +15,57 @@ export interface ChatMessage {
 	timestamp: number;
 }
 
+export interface ChatSession {
+	id: string; // chatId
+	title: string;
+	timestamp: number;
+}
+
 class NewTabDatabase extends Dexie {
 	shortcuts!: EntityTable<Shortcut, "id">;
 	messages!: EntityTable<ChatMessage, "id">;
+	sessions!: EntityTable<ChatSession, "id">;
 
 	constructor() {
 		super("NewTabDatabase");
+
 		this.version(1).stores({
 			shortcuts: "++id, &slotIndex",
 			messages: "++id, chatId, timestamp",
 		});
+
+		this.version(2)
+			.stores({
+				shortcuts: "++id, &slotIndex",
+				messages: "++id, chatId, timestamp",
+				sessions: "id, timestamp",
+			})
+			.upgrade(async (trans) => {
+				const allMessages = await trans.table("messages").toArray();
+				const sessionsMap = new Map();
+				for (const msg of allMessages) {
+					const existing = sessionsMap.get(msg.chatId);
+					if (!existing) {
+						sessionsMap.set(msg.chatId, {
+							id: msg.chatId,
+							title: msg.role === "user" ? msg.content : "New Conversation",
+							timestamp: msg.timestamp,
+						});
+					} else {
+						if (msg.role === "user" && existing.title === "New Conversation") {
+							existing.title = msg.content;
+						}
+						if (msg.timestamp > existing.timestamp) {
+							existing.timestamp = msg.timestamp;
+						}
+					}
+				}
+				if (sessionsMap.size > 0) {
+					await trans
+						.table("sessions")
+						.bulkAdd(Array.from(sessionsMap.values()));
+				}
+			});
 
 		// Seed the database automatically on the first creation using a verification loop
 		this.on("ready", async () => {
@@ -64,11 +105,34 @@ export async function appendMessage(
 	role: "user" | "assistant",
 	content: string,
 ) {
-	await db.messages.add({
-		chatId,
-		role,
-		content,
-		timestamp: Date.now(),
+	const timestamp = Date.now();
+
+	await db.transaction("rw", db.messages, db.sessions, async () => {
+		await db.messages.add({
+			chatId,
+			role,
+			content,
+			timestamp,
+		});
+
+		const session = await db.sessions.get(chatId);
+		if (!session) {
+			await db.sessions.put({
+				id: chatId,
+				title: role === "user" ? content : "New Conversation",
+				timestamp,
+			});
+		} else {
+			let newTitle = session.title;
+			if (role === "user" && session.title === "New Conversation") {
+				newTitle = content;
+			}
+			await db.sessions.put({
+				id: chatId,
+				title: newTitle,
+				timestamp: Math.max(session.timestamp, timestamp),
+			});
+		}
 	});
 }
 
