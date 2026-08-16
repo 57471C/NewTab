@@ -10,7 +10,7 @@ export interface Shortcut {
 export interface ChatMessage {
 	id?: number;
 	chatId: string;
-	role: "user" | "assistant";
+	role: "user" | "assistant" | "system";
 	content: string;
 	timestamp: number;
 }
@@ -102,7 +102,7 @@ export async function saveShortcut(
 
 export async function appendMessage(
 	chatId: string,
-	role: "user" | "assistant",
+	role: "user" | "assistant" | "system",
 	content: string,
 ) {
 	const timestamp = Date.now();
