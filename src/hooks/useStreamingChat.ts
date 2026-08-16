@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { getProviderConfig } from "../lib/api-providers";
 import { db } from "../lib/db";
+import { extractTokenFromChunk } from "../lib/streaming";
 import { vault } from "../lib/vault";
 
 export function useStreamingChat() {
@@ -35,45 +37,11 @@ export function useStreamingChat() {
 				timestamp: Date.now(),
 			});
 
-			let endpoint = "";
-			let payload: Record<string, unknown> = {};
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-			};
-
-			if (model.startsWith("grok")) {
-				endpoint = "https://api.x.ai/v1/chat/completions";
-				headers.Authorization = `Bearer ${apiKey}`;
-				payload = {
-					model: model,
-					stream: true,
-					messages: [{ role: "user", content: prompt }],
-				};
-			} else if (model === "GPT-4") {
-				endpoint = "https://api.openai.com/v1/chat/completions";
-				headers.Authorization = `Bearer ${apiKey}`;
-				payload = {
-					model: "gpt-4o",
-					stream: true,
-					messages: [{ role: "user", content: prompt }],
-				};
-			} else if (model === "Claude") {
-				endpoint = "https://api.anthropic.com/v1/messages";
-				headers["x-api-key"] = apiKey;
-				headers["anthropic-version"] = "2023-06-01";
-				payload = {
-					model: "claude-3-5-sonnet-latest",
-					stream: true,
-					max_tokens: 1024,
-					messages: [{ role: "user", content: prompt }],
-				};
-			} else if (model === "Gemini") {
-				endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse`;
-				headers["x-goog-api-key"] = apiKey;
-				payload = {
-					contents: [{ parts: [{ text: prompt }] }],
-				};
-			}
+			const { endpoint, headers, payload } = getProviderConfig(
+				model,
+				apiKey,
+				prompt,
+			);
 
 			let assistantContent = "";
 			let updatePromise = Promise.resolve();
@@ -90,18 +58,7 @@ export function useStreamingChat() {
 					if (line.startsWith("data:")) {
 						try {
 							const data = JSON.parse(line.slice(5).trim());
-							let token = "";
-
-							if (model.startsWith("grok") || model === "GPT-4") {
-								token = data.choices[0]?.delta?.content || "";
-							} else if (model === "Claude") {
-								if (data.type === "content_block_delta") {
-									token = data.delta?.text || "";
-								}
-							} else if (model === "Gemini") {
-								token = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-							}
-
+							const token = extractTokenFromChunk(model, data);
 							assistantContent += token;
 							hasUpdates = true;
 							// biome-ignore lint/correctness/noUnusedVariables: the agent insists this try/catch is necessary to handle partial JSON from stream chunks, pending a more robust streaming implementation
