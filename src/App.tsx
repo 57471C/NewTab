@@ -26,7 +26,6 @@ import Toast from "./components/Toast";
 import { useChatSessions } from "./hooks/useChatSessions";
 import { useStreamingChat } from "./hooks/useStreamingChat";
 import { db, reorderShortcuts, saveShortcut } from "./lib/db";
-import type { ShortcutLink } from "./lib/types";
 
 function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -108,7 +107,7 @@ function App() {
 		db.shortcuts.orderBy("slotIndex").toArray(),
 	);
 
-	const links: ShortcutLink[] = rawLinks
+	const links = rawLinks
 		? rawLinks.map((link) => ({
 				id: String(link.id),
 				title: link.title,
