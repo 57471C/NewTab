@@ -149,8 +149,8 @@ function App() {
 		try {
 			await saveShortcut(slotIndex, title, formattedUrl);
 			showToast("success", "Shortcut successfully updated.");
-			// biome-ignore lint/correctness/noUnusedVariables: agent says error needs to be caught for logging, pending schema update
 		} catch (error) {
+			console.error("Failed to update shortcut:", error);
 			showToast("error", "Failed to update shortcut.");
 		}
 	};
