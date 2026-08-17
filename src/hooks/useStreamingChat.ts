@@ -48,9 +48,12 @@ export function useStreamingChat() {
 			let pendingContent = "";
 			let isUpdating = false;
 			const decoder = new TextDecoder("utf-8");
+			let streamBuffer = "";
 
 			const processChunk = (chunk: string) => {
-				const lines = chunk.split("\n");
+				streamBuffer += chunk;
+				const lines = streamBuffer.split("\n");
+				streamBuffer = lines.pop() ?? "";
 				let hasUpdates = false;
 
 				for (const line of lines) {
@@ -61,9 +64,8 @@ export function useStreamingChat() {
 							const token = extractTokenFromChunk(model, data);
 							assistantContent += token;
 							hasUpdates = true;
-							// biome-ignore lint/correctness/noUnusedVariables: the agent insists this try/catch is necessary to handle partial JSON from stream chunks, pending a more robust streaming implementation
 						} catch (e) {
-							// Discard incomplete JSON fragments across stream chunks
+							console.error("Failed to parse stream JSON:", e);
 						}
 					}
 				}
