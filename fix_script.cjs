@@ -1,6 +1,6 @@
-const fs = require('fs');
-const filepath = 'src/hooks/useStreamingChat.ts';
-let code = fs.readFileSync(filepath, 'utf-8');
+const fs = require("fs");
+const filepath = "src/hooks/useStreamingChat.ts";
+let code = fs.readFileSync(filepath, "utf-8");
 
 const oldLogic = `				if (hasUpdates) {
 					pendingContent = assistantContent;
@@ -40,9 +40,9 @@ const newLogic = `				if (hasUpdates) {
 				}`;
 
 if (code.includes(oldLogic)) {
-    code = code.replace(oldLogic, newLogic);
-    fs.writeFileSync(filepath, code);
-    console.log("Replaced logic.");
+	code = code.replace(oldLogic, newLogic);
+	fs.writeFileSync(filepath, code);
+	console.log("Replaced logic.");
 } else {
-    console.log("Old logic not found.");
+	console.log("Old logic not found.");
 }
