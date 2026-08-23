@@ -2,6 +2,98 @@ import { Globe, Plus } from "lucide-react";
 import { useState } from "react";
 import type { ShortcutLink } from "../lib/types";
 
+const domainCache = new Map<string, string>();
+const publicDomainCache = new Map<string, boolean>();
+const sanitizedUrlCache = new Map<string, string>();
+
+const getDomain = (url: string) => {
+	if (!url) return "";
+	const cached = domainCache.get(url);
+	if (cached !== undefined) return cached;
+	try {
+		const parsedUrl = new URL(url.startsWith("http") ? url : `https://${url}`);
+		const domain = parsedUrl.hostname;
+		domainCache.set(url, domain);
+		return domain;
+	} catch {
+		domainCache.set(url, "");
+		return "";
+	}
+};
+
+const isPublicDomain = (hostname: string) => {
+	if (!hostname) return false;
+	const cached = publicDomainCache.get(hostname);
+	if (cached !== undefined) return cached;
+
+	const lowerHost = hostname.toLowerCase();
+
+	if (lowerHost === "localhost" || lowerHost.endsWith(".local")) {
+		publicDomainCache.set(hostname, false);
+		return false;
+	}
+
+	// IPv4 checks
+	const ipv4Match = lowerHost.match(
+		/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
+	);
+	if (ipv4Match) {
+		const parts = ipv4Match.slice(1).map(Number);
+		if (
+			parts[0] === 10 ||
+			(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+			(parts[0] === 192 && parts[1] === 168) ||
+			parts[0] === 127 ||
+			(parts[0] === 169 && parts[1] === 254)
+		) {
+			publicDomainCache.set(hostname, false);
+			return false;
+		}
+	}
+
+	// IPv6 checks
+	if (lowerHost.includes(":")) {
+		const ipv6 = lowerHost.replace(/^\[|\]$/g, "");
+		if (
+			ipv6 === "::1" ||
+			ipv6.startsWith("fc") ||
+			ipv6.startsWith("fd") ||
+			ipv6.startsWith("fe8") ||
+			ipv6.startsWith("fe9") ||
+			ipv6.startsWith("fea") ||
+			ipv6.startsWith("feb")
+		) {
+			publicDomainCache.set(hostname, false);
+			return false;
+		}
+	}
+
+	publicDomainCache.set(hostname, true);
+	return true;
+};
+
+const sanitizeUrl = (url?: string) => {
+	if (!url) return "#";
+	const cached = sanitizedUrlCache.get(url);
+	if (cached !== undefined) return cached;
+
+	const cleaned = url
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control chars to strip them
+		.replace(/[\x00-\x1F\x7F]/g, "")
+		.trim()
+		.toLowerCase();
+	if (
+		cleaned.startsWith("javascript:") ||
+		cleaned.startsWith("data:") ||
+		cleaned.startsWith("vbscript:")
+	) {
+		sanitizedUrlCache.set(url, "#");
+		return "#";
+	}
+	sanitizedUrlCache.set(url, url);
+	return url;
+};
+
 export default function LinkGrid({
 	links,
 	onReorder,
@@ -36,78 +128,6 @@ export default function LinkGrid({
 
 	const handleDragEnd = () => {
 		setDraggedIndex(null);
-	};
-
-	const getDomain = (url: string) => {
-		try {
-			const parsedUrl = new URL(
-				url.startsWith("http") ? url : `https://${url}`,
-			);
-			return parsedUrl.hostname;
-		} catch {
-			return "";
-		}
-	};
-
-	const isPublicDomain = (hostname: string) => {
-		if (!hostname) return false;
-		const lowerHost = hostname.toLowerCase();
-
-		if (lowerHost === "localhost" || lowerHost.endsWith(".local")) {
-			return false;
-		}
-
-		// IPv4 checks
-		const ipv4Match = lowerHost.match(
-			/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
-		);
-		if (ipv4Match) {
-			const parts = ipv4Match.slice(1).map(Number);
-			if (
-				parts[0] === 10 ||
-				(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
-				(parts[0] === 192 && parts[1] === 168) ||
-				parts[0] === 127 ||
-				(parts[0] === 169 && parts[1] === 254)
-			) {
-				return false;
-			}
-		}
-
-		// IPv6 checks
-		if (lowerHost.includes(":")) {
-			const ipv6 = lowerHost.replace(/^\[|\]$/g, "");
-			if (
-				ipv6 === "::1" ||
-				ipv6.startsWith("fc") ||
-				ipv6.startsWith("fd") ||
-				ipv6.startsWith("fe8") ||
-				ipv6.startsWith("fe9") ||
-				ipv6.startsWith("fea") ||
-				ipv6.startsWith("feb")
-			) {
-				return false;
-			}
-		}
-
-		return true;
-	};
-
-	const sanitizeUrl = (url?: string) => {
-		if (!url) return "#";
-		const cleaned = url
-			// biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally matching control chars to strip them
-			.replace(/[\x00-\x1F\x7F]/g, "")
-			.trim()
-			.toLowerCase();
-		if (
-			cleaned.startsWith("javascript:") ||
-			cleaned.startsWith("data:") ||
-			cleaned.startsWith("vbscript:")
-		) {
-			return "#";
-		}
-		return url;
 	};
 
 	return (
