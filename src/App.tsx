@@ -13,7 +13,7 @@ import {
 	Sun,
 	X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import chatgptLogo from "./assets/ChatGPT.svg";
 import claudeLogo from "./assets/claude.svg";
 import geminiLogo from "./assets/gemini.svg";
@@ -107,19 +107,21 @@ function App() {
 		db.shortcuts.orderBy("slotIndex").toArray(),
 	);
 
-	const links = rawLinks
-		? rawLinks.map((link) => ({
-				id: String(link.id),
-				title: link.title,
-				url: link.url,
-				index: link.slotIndex,
-			}))
-		: Array.from({ length: 8 }, (_, i) => ({
-				id: `placeholder-${i}`,
-				title: "Add Link",
-				url: "",
-				index: i,
-			}));
+	const links = useMemo(() => {
+		return rawLinks
+			? rawLinks.map((link) => ({
+					id: String(link.id),
+					title: link.title,
+					url: link.url,
+					index: link.slotIndex,
+				}))
+			: Array.from({ length: 8 }, (_, i) => ({
+					id: `placeholder-${i}`,
+					title: "Add Link",
+					url: "",
+					index: i,
+				}));
+	}, [rawLinks]);
 
 	const showToast = (type: "success" | "error", message: string) => {
 		setToast({ type, message });
