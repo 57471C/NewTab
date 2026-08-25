@@ -1,5 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { type ChatMessage, db } from "../lib/db";
 
 interface ChatFeedProps {
@@ -52,6 +52,8 @@ function MessageFormatter({ content }: { content: string }) {
 		</div>
 	);
 }
+
+const MemoizedMessageFormatter = memo(MessageFormatter);
 
 export default function ChatFeed({ activeChatId, isStreaming }: ChatFeedProps) {
 	const messages = useLiveQuery(
@@ -109,7 +111,7 @@ export default function ChatFeed({ activeChatId, isStreaming }: ChatFeedProps) {
 							</div>
 						) : (
 							<div className="w-full bg-transparent py-4 text-sm text-zinc-200">
-								<MessageFormatter content={msg.content} />
+								<MemoizedMessageFormatter content={msg.content} />
 							</div>
 						)}
 					</div>
