@@ -174,6 +174,14 @@ export function useStreamingChat() {
 				errorLog = sanitizedError;
 			} else if (typeof error === "string" && apiKey) {
 				errorLog = error.split(apiKey).join("[REDACTED]");
+			} else if (apiKey) {
+				try {
+					errorLog = JSON.parse(
+						JSON.stringify(error).split(apiKey).join("[REDACTED]"),
+					);
+				} catch {
+					errorLog = String(error).split(apiKey).join("[REDACTED]");
+				}
 			}
 			console.error("Chat streaming error:", errorLog);
 			await db.messages.add({
