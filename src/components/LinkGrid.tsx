@@ -120,7 +120,12 @@ export default function LinkGrid({
 			e.dataTransfer.getData("text/plain"),
 			10,
 		);
-		if (!Number.isNaN(sourceIndex) && sourceIndex !== targetIndex) {
+		if (
+			!Number.isNaN(sourceIndex) &&
+			sourceIndex >= 0 &&
+			sourceIndex < links.length &&
+			sourceIndex !== targetIndex
+		) {
 			onReorder(sourceIndex, targetIndex);
 		}
 		setDraggedIndex(null);
