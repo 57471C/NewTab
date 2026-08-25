@@ -41,9 +41,8 @@ class NewTabDatabase extends Dexie {
 				sessions: "id, timestamp",
 			})
 			.upgrade(async (trans) => {
-				const allMessages = await trans.table("messages").toArray();
 				const sessionsMap = new Map();
-				for (const msg of allMessages) {
+				await trans.table("messages").each((msg) => {
 					const existing = sessionsMap.get(msg.chatId);
 					if (!existing) {
 						sessionsMap.set(msg.chatId, {
@@ -59,7 +58,7 @@ class NewTabDatabase extends Dexie {
 							existing.timestamp = msg.timestamp;
 						}
 					}
-				}
+				});
 				if (sessionsMap.size > 0) {
 					await trans
 						.table("sessions")
