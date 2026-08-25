@@ -5,6 +5,7 @@ import { type ChatMessage, db } from "../lib/db";
 interface ChatFeedProps {
 	activeChatId: string;
 	isStreaming?: boolean;
+	streamingContent?: string;
 }
 
 function MessageFormatter({ content }: { content: string }) {
@@ -55,11 +56,27 @@ function MessageFormatter({ content }: { content: string }) {
 
 const MemoizedMessageFormatter = memo(MessageFormatter);
 
-export default function ChatFeed({ activeChatId, isStreaming }: ChatFeedProps) {
-	const messages = useLiveQuery(
+export default function ChatFeed({ activeChatId, isStreaming, streamingContent }: ChatFeedProps) {
+	const dbMessages = useLiveQuery(
 		() => db.messages.where("chatId").equals(activeChatId).sortBy("timestamp"),
 		[activeChatId],
 	) as ChatMessage[] | undefined;
+
+	// Inject active streaming content into the messages array layout
+	const messages = [
+		...(dbMessages || []),
+		...(isStreaming && streamingContent
+			? [
+					{
+						id: -1,
+						chatId: activeChatId,
+						role: "assistant" as const,
+						content: streamingContent,
+						timestamp: Date.now(),
+					},
+				]
+			: []),
+	];
 
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const anchorRef = useRef<HTMLDivElement>(null);
@@ -79,7 +96,7 @@ export default function ChatFeed({ activeChatId, isStreaming }: ChatFeedProps) {
 		}
 	}, [isAutoScroll]);
 
-	if (!messages || messages.length === 0) {
+	if (!dbMessages || (messages.length === 0 && !isStreaming)) {
 		return (
 			<div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
 				<p className="font-medium text-sm text-zinc-500">
@@ -116,7 +133,7 @@ export default function ChatFeed({ activeChatId, isStreaming }: ChatFeedProps) {
 						)}
 					</div>
 				))}
-				{isStreaming && (
+				{isStreaming && !streamingContent && (
 					<div className="flex items-start">
 						<div className="rounded-xl bg-transparent py-4 text-sm">
 							<span className="flex gap-1">

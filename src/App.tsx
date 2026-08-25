@@ -58,7 +58,7 @@ function App() {
 		{ label: "Grok 3 (Reasoning)", value: "grok-3", icon: grokLogo },
 	];
 
-	const { streamChat, isStreaming } = useStreamingChat();
+	const { streamChat, isStreaming, streamingContent, streamingChatId } = useStreamingChat();
 
 	const handleNewChat = () => {
 		setIsChatActive(false);
@@ -316,7 +316,8 @@ function App() {
 				{isChatActive ? (
 					<ChatFeed
 						activeChatId={activeChatId || ""}
-						isStreaming={isStreaming}
+						isStreaming={isStreaming && activeChatId === streamingChatId}
+						streamingContent={activeChatId === streamingChatId ? streamingContent : undefined}
 					/>
 				) : (
 					<div className="flex-1 overflow-y-auto p-6">

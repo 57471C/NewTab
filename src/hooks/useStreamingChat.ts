@@ -6,6 +6,8 @@ import { vault } from "../lib/vault";
 
 export function useStreamingChat() {
 	const [isStreaming, setIsStreaming] = useState(false);
+	const [streamingContent, setStreamingContent] = useState("");
+	const [streamingChatId, setStreamingChatId] = useState<string | null>(null);
 
 	const streamChat = async (
 		prompt: string,
@@ -13,7 +15,10 @@ export function useStreamingChat() {
 		chatId = "default",
 	) => {
 		setIsStreaming(true);
+		setStreamingContent("");
+		setStreamingChatId(chatId);
 		let apiKey: string | null = null;
+		let assistantContent = "";
 		try {
 			const provider = model.startsWith("grok") ? "Grok" : model;
 			apiKey = await vault.get(provider);
@@ -30,23 +35,13 @@ export function useStreamingChat() {
 				timestamp: Date.now(),
 			});
 
-			const assistantMsgId = await db.messages.add({
-				chatId,
-				role: "assistant",
-				content: "",
-				timestamp: Date.now(),
-			});
-
 			const { endpoint, headers, payload } = getProviderConfig(
 				model,
 				apiKey,
 				prompt,
 			);
 
-			let assistantContent = "";
-			let updatePromise = Promise.resolve();
-			let pendingContent = "";
-			let isUpdating = false;
+			let finalError: Error | null = null;
 			const decoder = new TextDecoder("utf-8");
 			let streamBuffer = "";
 
@@ -71,26 +66,7 @@ export function useStreamingChat() {
 				}
 
 				if (hasUpdates) {
-					pendingContent = assistantContent;
-					if (!isUpdating) {
-						isUpdating = true;
-						updatePromise = updatePromise.then(async () => {
-							while (true) {
-								const currentContent = pendingContent;
-								try {
-									await db.messages.update(assistantMsgId, {
-										content: currentContent,
-									});
-								} catch (e) {
-									console.error("Stream DB write error:", e);
-								}
-								if (pendingContent === currentContent) {
-									isUpdating = false;
-									break;
-								}
-							}
-						});
-					}
+					setStreamingContent(assistantContent);
 				}
 			};
 
@@ -110,18 +86,18 @@ export function useStreamingChat() {
 
 					port.onMessage.addListener(async (msg) => {
 						if (msg.type === "error") {
-							reject(new Error(msg.error));
+							finalError = new Error(msg.error);
+							reject(finalError);
 							port.disconnect();
 						} else if (msg.type === "chunk") {
 							processChunk(msg.value);
 						} else if (msg.type === "done") {
-							await updatePromise;
-							const finalMsg = await db.messages.get(assistantMsgId);
-							if (finalMsg && pendingContent !== finalMsg.content) {
-								await db.messages.update(assistantMsgId, {
-									content: pendingContent,
-								});
-							}
+							await db.messages.add({
+								chatId,
+								role: "assistant",
+								content: assistantContent,
+								timestamp: Date.now(),
+							});
 							resolve();
 						}
 					});
@@ -139,7 +115,8 @@ export function useStreamingChat() {
 
 				if (!response.ok) {
 					const errorTxt = await response.text();
-					throw new Error(`API Error: ${response.status} - ${errorTxt}`);
+					finalError = new Error(`API Error: ${response.status} - ${errorTxt}`);
+					throw finalError;
 				}
 
 				const reader = response.body?.getReader();
@@ -151,13 +128,13 @@ export function useStreamingChat() {
 					const chunk = decoder.decode(value, { stream: true });
 					processChunk(chunk);
 				}
-				await updatePromise;
-				const finalMsg = await db.messages.get(assistantMsgId);
-				if (finalMsg && pendingContent !== finalMsg.content) {
-					await db.messages.update(assistantMsgId, {
-						content: pendingContent,
-					});
-				}
+
+				await db.messages.add({
+					chatId,
+					role: "assistant",
+					content: assistantContent,
+					timestamp: Date.now(),
+				});
 			}
 		} catch (error: unknown) {
 			let errorMessage =
@@ -184,16 +161,22 @@ export function useStreamingChat() {
 				}
 			}
 			console.error("Chat streaming error:", errorLog);
-			await db.messages.add({
+
+			const contentWithErr = `${assistantContent}\n\nError: ${errorMessage}`;
+			setStreamingContent(contentWithErr);
+
+			db.messages.add({
 				chatId,
-				role: "system",
-				content: `Error: ${errorMessage}`,
+				role: "assistant",
+				content: contentWithErr,
 				timestamp: Date.now(),
 			});
 		} finally {
 			setIsStreaming(false);
+			setStreamingChatId(null);
+			setStreamingContent("");
 		}
 	};
 
-	return { streamChat, isStreaming };
+	return { streamChat, isStreaming, streamingContent, streamingChatId };
 }
