@@ -1,10 +1,15 @@
-import { ArrowUp, Globe, Mic, Paperclip } from "lucide-react";
+import { ArrowUp, Globe, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import chatgptLogo from "../assets/ChatGPT.svg";
 import claudeLogo from "../assets/claude.svg";
 import geminiLogo from "../assets/gemini.svg";
 import grokLogo from "../assets/grok.svg";
 import { type ProviderId, resolveProvider } from "../lib/api-providers";
+import {
+	type ChatAttachment,
+	MAX_ATTACHMENTS,
+	readImageFile,
+} from "../lib/attachments";
 import { prefs } from "../lib/prefs";
 import { PROVIDER_IDS, vault } from "../lib/vault";
 
@@ -80,6 +85,7 @@ export default function ChatInput({
 		searchEngine: string,
 		aiModel: string,
 		forceChat?: boolean,
+		attachments?: ChatAttachment[],
 	) => void;
 }) {
 	const [inputValue, setInputValue] = useState("");
@@ -90,7 +96,10 @@ export default function ChatInput({
 	const [readyProviders, setReadyProviders] = useState<Set<ProviderId>>(
 		new Set(),
 	);
+	const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+	const [attachError, setAttachError] = useState<string | null>(null);
 	const chassisRef = useRef<HTMLDivElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
@@ -156,6 +165,27 @@ export default function ChatInput({
 		};
 	}, []);
 
+	const addFiles = async (files: File[]) => {
+		setAttachError(null);
+		const next: ChatAttachment[] = [];
+		for (const file of files) {
+			if (attachments.length + next.length >= MAX_ATTACHMENTS) {
+				setAttachError(`Maximum ${MAX_ATTACHMENTS} images.`);
+				break;
+			}
+			try {
+				next.push(await readImageFile(file));
+			} catch (error) {
+				setAttachError(
+					error instanceof Error ? error.message : "Could not attach file.",
+				);
+			}
+		}
+		if (next.length) {
+			setAttachments((current) => [...current, ...next]);
+		}
+	};
+
 	const selectModel = (model: string) => {
 		setAiModel(model);
 		setIsModelMenuOpen(false);
@@ -175,9 +205,12 @@ export default function ChatInput({
 	};
 
 	const handleSubmitInternal = (forceChat = false) => {
-		if (!inputValue.trim()) return;
+		if (!inputValue.trim() && attachments.length === 0) return;
 		const query = inputValue;
+		const pending = attachments;
 		setInputValue("");
+		setAttachments([]);
+		setAttachError(null);
 
 		if (chassisRef.current) {
 			const textarea = chassisRef.current.querySelector("textarea");
@@ -186,7 +219,7 @@ export default function ChatInput({
 			}
 		}
 
-		onSubmit(query, searchEngine, aiModel, forceChat);
+		onSubmit(query, searchEngine, aiModel, forceChat || pending.length > 0, pending);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -194,6 +227,15 @@ export default function ChatInput({
 			e.preventDefault();
 			handleSubmitInternal(e.metaKey || e.ctrlKey);
 		}
+	};
+
+	const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+		const files = [...e.clipboardData.files].filter((file) =>
+			file.type.startsWith("image/"),
+		);
+		if (!files.length) return;
+		e.preventDefault();
+		void addFiles(files);
 	};
 
 	const selectedModel =
@@ -204,13 +246,52 @@ export default function ChatInput({
 		<div className="mx-auto w-full max-w-3xl px-4 pb-8">
 			<div
 				ref={chassisRef}
+				onDragOver={(e) => {
+					e.preventDefault();
+				}}
+				onDrop={(e) => {
+					e.preventDefault();
+					void addFiles([...e.dataTransfer.files]);
+				}}
 				className="mx-auto flex w-full max-w-2xl flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900 p-3 shadow-xl transition-all focus-within:border-zinc-700"
 			>
+				{attachments.length > 0 && (
+					<div className="flex flex-wrap gap-2">
+						{attachments.map((attachment) => (
+							<div
+								key={attachment.id}
+								className="relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700"
+							>
+								<img
+									src={attachment.dataUrl}
+									alt={attachment.name}
+									className="h-full w-full object-cover"
+								/>
+								<button
+									type="button"
+									onClick={() =>
+										setAttachments((current) =>
+											current.filter((item) => item.id !== attachment.id),
+										)
+									}
+									className="absolute top-0.5 right-0.5 rounded-full bg-zinc-950/80 p-0.5 text-zinc-200"
+									title={`Remove ${attachment.name}`}
+								>
+									<X size={10} />
+								</button>
+							</div>
+						))}
+					</div>
+				)}
+				{attachError && (
+					<p className="px-1 text-[11px] text-red-400">{attachError}</p>
+				)}
 				<textarea
 					name="chat-input"
 					value={inputValue}
 					onChange={handleInputResize}
 					onKeyDown={handleKeyDown}
+					onPaste={handlePaste}
 					className="w-full resize-none border-0 bg-transparent p-1 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:ring-0"
 					placeholder="Ask anything or type a web address..."
 					rows={1}
@@ -219,9 +300,22 @@ export default function ChatInput({
 
 				<div className="flex w-full items-center justify-between border-zinc-800/40 border-t pt-1.5">
 					<div className="flex items-center gap-2">
+						<input
+							ref={fileInputRef}
+							type="file"
+							accept="image/png,image/jpeg,image/webp,image/gif"
+							multiple
+							className="hidden"
+							onChange={(e) => {
+								void addFiles([...(e.target.files ?? [])]);
+								e.target.value = "";
+							}}
+						/>
 						<button
 							type="button"
+							onClick={() => fileInputRef.current?.click()}
 							className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
+							title="Attach images"
 						>
 							<Paperclip size={16} />
 						</button>
@@ -314,12 +408,6 @@ export default function ChatInput({
 								</div>
 							)}
 						</div>
-						<button
-							type="button"
-							className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
-						>
-							<Mic size={16} />
-						</button>
 						<button
 							type="button"
 							onClick={() => handleSubmitInternal(false)}

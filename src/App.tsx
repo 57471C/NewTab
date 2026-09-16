@@ -18,6 +18,7 @@ import SettingsModal from "./components/SettingsModal";
 import Toast from "./components/Toast";
 import { useChatSessions } from "./hooks/useChatSessions";
 import { useStreamingChat } from "./hooks/useStreamingChat";
+import type { ChatAttachment } from "./lib/attachments";
 import { db, reorderShortcuts, saveShortcut } from "./lib/db";
 
 function App() {
@@ -62,7 +63,6 @@ function App() {
 
 	const chatSessions = useChatSessions();
 
-	// Core Link Storage Layer
 	const rawLinks = useLiveQuery(() =>
 		db.shortcuts.orderBy("slotIndex").toArray(),
 	);
@@ -126,18 +126,24 @@ function App() {
 		searchEngine: string,
 		aiModel: string,
 		forceChat = false,
+		attachments: ChatAttachment[] = [],
 	) => {
 		const trimmed = currentQuery.trim();
-		if (!trimmed) return;
+		if (!trimmed && attachments.length === 0) return;
 
-		if (forceChat || isChatActive) {
+		if (forceChat || isChatActive || attachments.length > 0) {
 			setIsChatActive(true);
 
 			const chatId = activeChatId || crypto.randomUUID();
 			if (!activeChatId) {
 				setActiveChatId(chatId);
 			}
-			await streamChat(trimmed, aiModel, chatId);
+			await streamChat(
+				trimmed || "Look at the attached image(s).",
+				aiModel,
+				chatId,
+				attachments,
+			);
 		} else {
 			const isUrl =
 				/^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d+)?(\/.*)?$/i.test(
@@ -160,7 +166,6 @@ function App() {
 		}
 	};
 
-	// Apply the dark mode class token to the HTML root
 	useEffect(() => {
 		if (isDarkMode) {
 			document.documentElement.classList.add("dark");
@@ -173,7 +178,6 @@ function App() {
 		<div className="flex h-screen w-screen overflow-hidden bg-zinc-50 text-zinc-950 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-50">
 			<Toast toast={toast} />
 
-			{/* Left Sidebar Column */}
 			<aside
 				className={`flex flex-col border-zinc-200 border-r bg-white transition-all duration-300 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 ${
 					isExpanded ? "w-64" : "w-16"
@@ -269,7 +273,6 @@ function App() {
 				</div>
 			</aside>
 
-			{/* Right Main Panel Column */}
 			<main className="relative flex flex-1 flex-col">
 				{isChatActive ? (
 					<ChatFeed

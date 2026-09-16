@@ -1,6 +1,10 @@
+import type { ChatAttachment } from "./attachments";
+import { splitDataUrl } from "./attachments";
+
 export interface ChatTurn {
 	role: "user" | "assistant" | "system";
 	content: string;
+	attachments?: ChatAttachment[];
 }
 
 export interface ProviderConfig {
@@ -24,8 +28,65 @@ export function resolveProvider(model: string): ProviderId {
 
 function visibleTurns(messages: ChatTurn[]): ChatTurn[] {
 	return messages
-		.filter((message) => message.role !== "system" && message.content.trim())
+		.filter(
+			(message) =>
+				message.role !== "system" &&
+				(message.content.trim() || (message.attachments?.length ?? 0) > 0),
+		)
 		.slice(-HISTORY_LIMIT);
+}
+
+function openAiContent(turn: ChatTurn) {
+	if (!turn.attachments?.length) return turn.content;
+	const parts: Array<Record<string, unknown>> = [];
+	if (turn.content.trim()) {
+		parts.push({ type: "text", text: turn.content });
+	}
+	for (const attachment of turn.attachments) {
+		parts.push({
+			type: "image_url",
+			image_url: { url: attachment.dataUrl },
+		});
+	}
+	return parts;
+}
+
+function claudeContent(turn: ChatTurn) {
+	if (!turn.attachments?.length) return turn.content;
+	const parts: Array<Record<string, unknown>> = [];
+	if (turn.content.trim()) {
+		parts.push({ type: "text", text: turn.content });
+	}
+	for (const attachment of turn.attachments) {
+		const { mime, data } = splitDataUrl(attachment.dataUrl);
+		parts.push({
+			type: "image",
+			source: {
+				type: "base64",
+				media_type: mime,
+				data,
+			},
+		});
+	}
+	return parts;
+}
+
+function geminiParts(turn: ChatTurn) {
+	const parts: Array<Record<string, unknown>> = [];
+	if (turn.content.trim()) {
+		parts.push({ text: turn.content });
+	}
+	for (const attachment of turn.attachments ?? []) {
+		const { mime, data } = splitDataUrl(attachment.dataUrl);
+		parts.push({
+			inline_data: {
+				mime_type: mime,
+				data,
+			},
+		});
+	}
+	if (!parts.length) parts.push({ text: " " });
+	return parts;
 }
 
 export function getProviderConfig(
@@ -48,7 +109,10 @@ export function getProviderConfig(
 		payload = {
 			model,
 			stream: true,
-			messages: turns.map(({ role, content }) => ({ role, content })),
+			messages: turns.map((turn) => ({
+				role: turn.role,
+				content: openAiContent(turn),
+			})),
 		};
 	} else if (provider === "GPT-4") {
 		endpoint = "https://api.openai.com/v1/chat/completions";
@@ -56,7 +120,10 @@ export function getProviderConfig(
 		payload = {
 			model: model === "GPT-4" ? "gpt-4o" : model,
 			stream: true,
-			messages: turns.map(({ role, content }) => ({ role, content })),
+			messages: turns.map((turn) => ({
+				role: turn.role,
+				content: openAiContent(turn),
+			})),
 		};
 	} else if (provider === "Claude") {
 		endpoint = "https://api.anthropic.com/v1/messages";
@@ -66,7 +133,10 @@ export function getProviderConfig(
 			model: model === "Claude" ? "claude-sonnet-5" : model,
 			stream: true,
 			max_tokens: 4096,
-			messages: turns.map(({ role, content }) => ({ role, content })),
+			messages: turns.map((turn) => ({
+				role: turn.role === "assistant" ? "assistant" : "user",
+				content: claudeContent(turn),
+			})),
 		};
 	} else if (provider === "Gemini") {
 		const geminiModel = model === "Gemini" ? "gemini-3.8-flash" : model;
@@ -75,7 +145,7 @@ export function getProviderConfig(
 		payload = {
 			contents: turns.map((turn) => ({
 				role: turn.role === "assistant" ? "model" : "user",
-				parts: [{ text: turn.content }],
+				parts: geminiParts(turn),
 			})),
 		};
 	}

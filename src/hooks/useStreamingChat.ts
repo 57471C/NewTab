@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { getProviderConfig, resolveProvider } from "../lib/api-providers";
+import {
+	type ChatAttachment,
+	attachmentNote,
+} from "../lib/attachments";
 import { appendMessage, db } from "../lib/db";
 import { extractTokenFromChunk } from "../lib/streaming";
 import { vault } from "../lib/vault";
@@ -13,6 +17,7 @@ export function useStreamingChat() {
 		prompt: string,
 		model: string,
 		chatId = "default",
+		attachments: ChatAttachment[] = [],
 	) => {
 		setIsStreaming(true);
 		setStreamingContent("");
@@ -33,17 +38,17 @@ export function useStreamingChat() {
 				.equals(chatId)
 				.sortBy("timestamp");
 
-			await appendMessage(chatId, "user", prompt);
+			const storedPrompt = `${prompt}${attachmentNote(attachments)}`.trim();
+			await appendMessage(chatId, "user", storedPrompt);
 
 			const { endpoint, headers, payload } = getProviderConfig(model, apiKey, [
 				...prior.map((message) => ({
 					role: message.role,
 					content: message.content,
 				})),
-				{ role: "user", content: prompt },
+				{ role: "user", content: prompt, attachments },
 			]);
 
-			let finalError: Error | null = null;
 			const decoder = new TextDecoder("utf-8");
 			let streamBuffer = "";
 
@@ -84,8 +89,7 @@ export function useStreamingChat() {
 
 					port.onMessage.addListener(async (msg) => {
 						if (msg.type === "error") {
-							finalError = new Error(msg.error);
-							reject(finalError);
+							reject(new Error(msg.error));
 							port.disconnect();
 						} else if (msg.type === "chunk") {
 							processChunk(msg.value);
@@ -108,8 +112,7 @@ export function useStreamingChat() {
 
 				if (!response.ok) {
 					const errorTxt = await response.text();
-					finalError = new Error(`API Error: ${response.status} - ${errorTxt}`);
-					throw finalError;
+					throw new Error(`API Error: ${response.status} - ${errorTxt}`);
 				}
 
 				const reader = response.body?.getReader();
