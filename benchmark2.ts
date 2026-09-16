@@ -1,57 +1,100 @@
 import "fake-indexeddb/auto";
-import { db } from "./src/lib/db.ts";
+import { performance } from "perf_hooks";
+import { db } from "./src/lib/db";
 
 async function runBenchmark() {
-    const chatId = "bench-chat-2";
-    // Seed db with 100 messages to simulate a decent sized chat
-    const msgs = [];
-    for(let i=0; i<100; i++) {
-        msgs.push({
-            chatId,
-            role: "user" as const,
-            content: "hello " + i,
-            timestamp: Date.now()
-        });
-    }
-    await db.messages.bulkAdd(msgs);
+	console.log("Generating data...");
 
-    const start = performance.now();
-    const assistantMsgId = await db.messages.add({
-        chatId,
-        role: "assistant",
-        content: "",
-        timestamp: Date.now()
-    });
+	const testCases = [
+		{ chats: 1, msgs: 100000 },
+	];
 
-    for (let i = 0; i < 200; i++) {
-        await db.messages.update(assistantMsgId, {
-            content: "chunk " + i
-        });
-        // simulate useLiveQuery re-triggering on DB mutation
-        await db.messages.where("chatId").equals(chatId).sortBy("timestamp");
-    }
-    const end = performance.now();
-    console.log(`Current (DB update + Re-query 200 chunks): ${end - start} ms`);
+	for (const tc of testCases) {
+		console.log(`\nTesting case: ${tc.chats} chats, ${tc.msgs} msgs each`);
+		await db.messages.clear();
+		await db.sessions.clear();
 
-    const start2 = performance.now();
-    let reactState = "";
-    const assistantMsgId2 = await db.messages.add({
-        chatId,
-        role: "assistant",
-        content: "",
-        timestamp: Date.now()
-    });
-    for (let i = 0; i < 200; i++) {
-        reactState = "chunk " + i;
-        // no db update, no re-query during stream
-    }
-    // Update at completion
-    await db.messages.update(assistantMsgId2, {
-        content: reactState
-    });
-    await db.messages.where("chatId").equals(chatId).sortBy("timestamp");
-    const end2 = performance.now();
-    console.log(`Optimized (React State + 1 DB update/query at end): ${end2 - start2} ms`);
+		const msgs = [];
+		for (let s = 0; s < tc.chats; s++) {
+			const chatId = `chat_${s}`;
+			for (let m = 0; m < tc.msgs; m++) {
+				const role = m % 2 === 0 ? "user" : "assistant";
+				const content = `Message ${m} for chat ${s}`;
+				const timestamp = Date.now() + s * 1000 + m;
+				msgs.push({
+					chatId,
+					role,
+					content,
+					timestamp,
+				});
+			}
+		}
+
+		console.log("Adding messages to DB...");
+		await db.messages.bulkAdd(msgs as any);
+
+		console.log("Running baseline (toArray)...");
+		global.gc && global.gc();
+		let startMem = process.memoryUsage().heapUsed;
+		const start1 = performance.now();
+
+		const allMessages1 = await db.messages.toArray();
+		const sessionsMap1 = new Map();
+		for (const msg of allMessages1) {
+			const existing = sessionsMap1.get(msg.chatId);
+			if (!existing) {
+				sessionsMap1.set(msg.chatId, {
+					id: msg.chatId,
+					title: msg.role === "user" ? msg.content : "New Conversation",
+					timestamp: msg.timestamp,
+				});
+			} else {
+				if (msg.role === "user" && existing.title === "New Conversation") {
+					existing.title = msg.content;
+				}
+				if (msg.timestamp > existing.timestamp) {
+					existing.timestamp = msg.timestamp;
+				}
+			}
+		}
+
+		const time1 = performance.now() - start1;
+		let endMem = process.memoryUsage().heapUsed;
+		let mem1 = endMem - startMem;
+
+		console.log("Running optimized (each)...");
+		global.gc && global.gc();
+		startMem = process.memoryUsage().heapUsed;
+		const start2 = performance.now();
+
+		const sessionsMap2 = new Map();
+		await db.messages.each(msg => {
+			const existing = sessionsMap2.get(msg.chatId);
+			if (!existing) {
+				sessionsMap2.set(msg.chatId, {
+					id: msg.chatId,
+					title: msg.role === "user" ? msg.content : "New Conversation",
+					timestamp: msg.timestamp,
+				});
+			} else {
+				if (msg.role === "user" && existing.title === "New Conversation") {
+					existing.title = msg.content;
+				}
+				if (msg.timestamp > existing.timestamp) {
+					existing.timestamp = msg.timestamp;
+				}
+			}
+		});
+
+		const time2 = performance.now() - start2;
+		endMem = process.memoryUsage().heapUsed;
+		let mem2 = endMem - startMem;
+
+		console.log(`Baseline (toArray): ${time1.toFixed(2)} ms, Memory Diff: ${(mem1 / 1024 / 1024).toFixed(2)} MB`);
+		console.log(`Optimized (each): ${time2.toFixed(2)} ms, Memory Diff: ${(mem2 / 1024 / 1024).toFixed(2)} MB`);
+	}
+
+	process.exit(0);
 }
 
 runBenchmark().catch(console.error);
