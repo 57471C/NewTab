@@ -127,25 +127,36 @@ function App() {
 		aiModel: string,
 		forceChat = false,
 	) => {
-		if (!currentQuery.trim()) return;
+		const trimmed = currentQuery.trim();
+		if (!trimmed) return;
 
 		if (forceChat || isChatActive) {
 			setIsChatActive(true);
 
-			// Generate a unique session token if it doesn't exist yet
 			const chatId = activeChatId || crypto.randomUUID();
 			if (!activeChatId) {
 				setActiveChatId(chatId);
 			}
-			await streamChat(currentQuery, aiModel, chatId);
+			await streamChat(trimmed, aiModel, chatId);
 		} else {
-			let searchUrl = "https://www.google.com/search?q=";
+			const isUrl =
+				/^(https?:\/\/)?([\w.-]+)\.([a-z]{2,})(:\d+)?(\/.*)?$/i.test(
+					trimmed,
+				);
+			if (isUrl) {
+				window.location.href = trimmed.startsWith("http")
+					? trimmed
+					: `https://${trimmed}`;
+				return;
+			}
+
+			let searchUrl = "https://www.google.com.au/search?q=";
 			if (searchEngine === "DuckDuckGo")
 				searchUrl = "https://duckduckgo.com/?q=";
 			else if (searchEngine === "Bing")
 				searchUrl = "https://www.bing.com/search?q=";
 
-			window.location.href = `${searchUrl}${encodeURIComponent(currentQuery)}`;
+			window.location.href = `${searchUrl}${encodeURIComponent(trimmed)}`;
 		}
 	};
 

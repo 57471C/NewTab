@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { getProviderConfig } from "../lib/api-providers";
-import { db } from "../lib/db";
+import { getProviderConfig, resolveProvider } from "../lib/api-providers";
+import { appendMessage, db } from "../lib/db";
 import { extractTokenFromChunk } from "../lib/streaming";
 import { vault } from "../lib/vault";
 
@@ -20,26 +20,28 @@ export function useStreamingChat() {
 		let apiKey: string | null = null;
 		let assistantContent = "";
 		try {
-			const provider = model.startsWith("grok") ? "Grok" : model;
+			const provider = resolveProvider(model);
 			apiKey = await vault.get(provider);
 			if (!apiKey) {
 				throw new Error(
-					`API key for ${model} is missing. Please configure it in settings.`,
+					`API key for ${provider} is missing. Please configure it in settings.`,
 				);
 			}
 
-			await db.messages.add({
-				chatId,
-				role: "user",
-				content: prompt,
-				timestamp: Date.now(),
-			});
+			const prior = await db.messages
+				.where("chatId")
+				.equals(chatId)
+				.sortBy("timestamp");
 
-			const { endpoint, headers, payload } = getProviderConfig(
-				model,
-				apiKey,
-				prompt,
-			);
+			await appendMessage(chatId, "user", prompt);
+
+			const { endpoint, headers, payload } = getProviderConfig(model, apiKey, [
+				...prior.map((message) => ({
+					role: message.role,
+					content: message.content,
+				})),
+				{ role: "user", content: prompt },
+			]);
 
 			let finalError: Error | null = null;
 			const decoder = new TextDecoder("utf-8");
@@ -70,11 +72,7 @@ export function useStreamingChat() {
 				}
 			};
 
-			if (
-				model === "Claude" &&
-				typeof chrome !== "undefined" &&
-				chrome.runtime
-			) {
+			if (provider === "Claude" && typeof chrome !== "undefined" && chrome.runtime) {
 				await new Promise<void>((resolve, reject) => {
 					const port = chrome.runtime.connect({ name: "anthropic-proxy" });
 					port.postMessage({
@@ -92,12 +90,7 @@ export function useStreamingChat() {
 						} else if (msg.type === "chunk") {
 							processChunk(msg.value);
 						} else if (msg.type === "done") {
-							await db.messages.add({
-								chatId,
-								role: "assistant",
-								content: assistantContent,
-								timestamp: Date.now(),
-							});
+							await appendMessage(chatId, "assistant", assistantContent);
 							resolve();
 						}
 					});
@@ -129,12 +122,7 @@ export function useStreamingChat() {
 					processChunk(chunk);
 				}
 
-				await db.messages.add({
-					chatId,
-					role: "assistant",
-					content: assistantContent,
-					timestamp: Date.now(),
-				});
+				await appendMessage(chatId, "assistant", assistantContent);
 			}
 		} catch (error: unknown) {
 			let errorMessage =
@@ -165,12 +153,7 @@ export function useStreamingChat() {
 			const contentWithErr = `${assistantContent}\n\nError: ${errorMessage}`;
 			setStreamingContent(contentWithErr);
 
-			db.messages.add({
-				chatId,
-				role: "assistant",
-				content: contentWithErr,
-				timestamp: Date.now(),
-			});
+			await appendMessage(chatId, "assistant", contentWithErr);
 		} finally {
 			setIsStreaming(false);
 			setStreamingChatId(null);

@@ -6,16 +6,56 @@ import geminiLogo from "../assets/gemini.svg";
 import grokLogo from "../assets/grok.svg";
 
 const AI_MODELS = [
-	{ label: "Gemini", value: "Gemini", icon: geminiLogo },
-	{ label: "Claude", value: "Claude", icon: claudeLogo },
-	{ label: "GPT-4", value: "GPT-4", icon: chatgptLogo, invert: true },
-	{ label: "Grok 4.3 (Flagship)", value: "grok-4.3", icon: grokLogo },
 	{
-		label: "Grok 4.20 (Fast)",
-		value: "grok-4.20-non-reasoning",
+		label: "Gemini 3.8 Flash",
+		value: "gemini-3.8-flash",
+		icon: geminiLogo,
+	},
+	{
+		label: "Gemini 3.5 Flash",
+		value: "gemini-3.5-flash",
+		icon: geminiLogo,
+	},
+	{
+		label: "Gemini 2.5 Pro",
+		value: "gemini-2.5-pro",
+		icon: geminiLogo,
+	},
+	{
+		label: "Claude Sonnet 5",
+		value: "claude-sonnet-5",
+		icon: claudeLogo,
+	},
+	{
+		label: "Claude Haiku 4.5",
+		value: "claude-haiku-4-5",
+		icon: claudeLogo,
+	},
+	{
+		label: "GPT-5.5",
+		value: "gpt-5.5",
+		icon: chatgptLogo,
+		invert: true,
+	},
+	{
+		label: "GPT-4o",
+		value: "gpt-4o",
+		icon: chatgptLogo,
+		invert: true,
+	},
+	{ label: "Grok 4.6", value: "grok-4.6", icon: grokLogo },
+	{ label: "Grok 4.3", value: "grok-4.3", icon: grokLogo },
+	{
+		label: "Grok 4.20 Fast",
+		value: "grok-4.20-0309-non-reasoning",
 		icon: grokLogo,
 	},
-	{ label: "Grok 3 (Reasoning)", value: "grok-3", icon: grokLogo },
+	{
+		label: "Grok 4.20 Reasoning",
+		value: "grok-4.20-0309-reasoning",
+		icon: grokLogo,
+	},
+	{ label: "Grok Build", value: "grok-build-0.1", icon: grokLogo },
 ];
 
 export default function ChatInput({
@@ -31,7 +71,7 @@ export default function ChatInput({
 	const [inputValue, setInputValue] = useState("");
 	const [searchEngine, setSearchEngine] = useState("Google");
 	const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
-	const [aiModel, setAiModel] = useState("Gemini");
+	const [aiModel, setAiModel] = useState("gemini-3.8-flash");
 	const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
 	const chassisRef = useRef<HTMLDivElement>(null);
 
@@ -60,7 +100,6 @@ export default function ChatInput({
 		const query = inputValue;
 		setInputValue("");
 
-		// Reset textarea height
 		if (chassisRef.current) {
 			const textarea = chassisRef.current.querySelector("textarea");
 			if (textarea) {
@@ -87,7 +126,6 @@ export default function ChatInput({
 				ref={chassisRef}
 				className="mx-auto flex w-full max-w-2xl flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900 p-3 shadow-xl transition-all focus-within:border-zinc-700"
 			>
-				{/* TOP ROW: TEXT ENTRY ZONE */}
 				<textarea
 					name="chat-input"
 					value={inputValue}
@@ -99,9 +137,7 @@ export default function ChatInput({
 					style={{ maxHeight: "200px" }}
 				/>
 
-				{/* BOTTOM ROW: UTILITY BAR MAPPING */}
 				<div className="flex w-full items-center justify-between border-zinc-800/40 border-t pt-1.5">
-					{/* LEFT ALIGNED ACTIONS */}
 					<div className="flex items-center gap-2">
 						<button
 							type="button"
@@ -141,7 +177,6 @@ export default function ChatInput({
 						</div>
 					</div>
 
-					{/* RIGHT ALIGNED ACTIONS */}
 					<div className="flex items-center gap-2">
 						<div className="relative">
 							<button
@@ -162,7 +197,7 @@ export default function ChatInput({
 								<span>{selectedModel.label}</span>
 							</button>
 							{isModelMenuOpen && (
-								<div className="absolute right-0 bottom-full mb-2 w-48 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
+								<div className="absolute right-0 bottom-full mb-2 max-h-80 w-56 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
 									{AI_MODELS.map((model) => (
 										<button
 											key={model.value}
