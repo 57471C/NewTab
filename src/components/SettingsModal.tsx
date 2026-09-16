@@ -13,6 +13,16 @@ const PROVIDERS = [
 type ProviderId = (typeof PROVIDERS)[number]["id"];
 type Tab = "keys" | "shortcuts";
 
+const fieldClass =
+	"rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-zinc-600";
+
+const tabClass = (active: boolean) =>
+	`rounded-md px-3 py-1.5 text-xs transition-colors ${
+		active
+			? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+			: "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+	}`;
+
 export default function SettingsModal({
 	isOpen,
 	onClose,
@@ -102,53 +112,42 @@ export default function SettingsModal({
 
 	return (
 		<div
-			className="scrollbar-custom fixed inset-0 z-50 flex h-full w-full items-center justify-center overflow-y-auto bg-black/50 text-zinc-200"
-			style={{ colorScheme: "dark" }}
+			className="scrollbar-custom fixed inset-0 z-50 flex h-full w-full items-center justify-center overflow-y-auto bg-black/40 text-zinc-800 dark:text-zinc-200"
 			onClick={onClose}
 			onKeyDown={(event) => {
 				if (event.key === "Escape") onClose();
 			}}
 		>
 			<div
-				className="relative mx-4 w-full max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl"
+				className="relative mx-4 w-full max-w-2xl rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
 				onClick={(event) => event.stopPropagation()}
 				onKeyDown={(event) => event.stopPropagation()}
 			>
 				<button
 					type="button"
-					className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-100"
+					className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
 					onClick={onClose}
 					aria-label="Close settings"
 				>
 					<X size={18} />
 				</button>
 
-				<h2 className="font-semibold text-lg text-zinc-50">Settings</h2>
+				<h2 className="font-semibold text-lg text-zinc-900 dark:text-zinc-50">
+					Settings
+				</h2>
 				<p className="mt-1 text-xs text-zinc-500">
 					Keys stay in this browser profile via chrome.storage.local. Nothing is
 					sent to a backend of ours.
 				</p>
 
-				<div className="mt-4 flex gap-2 border-zinc-800 border-b pb-3">
-					<button
-						type="button"
-						onClick={() => setTab("keys")}
-						className={`rounded-md px-3 py-1.5 text-xs transition-colors ${
-							tab === "keys"
-								? "bg-zinc-800 text-zinc-50"
-								: "text-zinc-400 hover:text-zinc-100"
-						}`}
-					>
+				<div className="mt-4 flex gap-2 border-zinc-200 border-b pb-3 dark:border-zinc-800">
+					<button type="button" onClick={() => setTab("keys")} className={tabClass(tab === "keys")}>
 						API keys
 					</button>
 					<button
 						type="button"
 						onClick={() => setTab("shortcuts")}
-						className={`rounded-md px-3 py-1.5 text-xs transition-colors ${
-							tab === "shortcuts"
-								? "bg-zinc-800 text-zinc-50"
-								: "text-zinc-400 hover:text-zinc-100"
-						}`}
+						className={tabClass(tab === "shortcuts")}
 					>
 						Shortcuts
 					</button>
@@ -159,7 +158,7 @@ export default function SettingsModal({
 						{PROVIDERS.map((provider) => (
 							<label key={provider.id} className="flex flex-col gap-1.5">
 								<span className="flex items-center justify-between text-xs">
-									<span className="font-medium text-zinc-200">
+									<span className="font-medium text-zinc-800 dark:text-zinc-200">
 										{provider.label}
 									</span>
 									<span className="text-zinc-500">
@@ -182,12 +181,12 @@ export default function SettingsModal({
 												? "Enter a new key to replace, or save empty to clear"
 												: provider.hint
 										}
-										className="flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
+										className={`flex-1 ${fieldClass}`}
 									/>
 									<button
 										type="button"
 										onClick={() => void saveKey(provider.id)}
-										className="rounded-md bg-zinc-100 px-3 py-2 font-medium text-xs text-zinc-950 transition-colors hover:bg-white"
+										className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-xs text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
 									>
 										Save
 									</button>
@@ -216,7 +215,7 @@ export default function SettingsModal({
 										);
 									}}
 									placeholder="Title"
-									className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
+									className={fieldClass}
 								/>
 								<input
 									type="text"
@@ -230,12 +229,12 @@ export default function SettingsModal({
 										);
 									}}
 									placeholder="https://example.com.au"
-									className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
+									className={fieldClass}
 								/>
 								<button
 									type="button"
 									onClick={() => void saveShortcut(shortcutDrafts[index])}
-									className="rounded-md bg-zinc-100 px-3 py-2 font-medium text-xs text-zinc-950 transition-colors hover:bg-white"
+									className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-xs text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
 								>
 									Save
 								</button>
