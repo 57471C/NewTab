@@ -78,7 +78,7 @@ function firstReadyModel(ready: Set<ProviderId>, preferred?: string | null) {
 }
 
 const chipClass =
-	"flex cursor-pointer items-center gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 font-medium text-xs text-zinc-700 transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-850 dark:text-zinc-300 dark:hover:border-zinc-700";
+	"flex cursor-pointer items-center gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 font-medium text-xs text-zinc-700 transition-colors hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-600";
 const menuClass =
 	"absolute bottom-full mb-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900";
 
