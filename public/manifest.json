@@ -5,6 +5,12 @@
 	"description": "A minimalist, local-first browser tab launcher and streaming AI companion.",
 	"permissions": ["storage", "scripting", "activeTab", "favicon"],
 	"host_permissions": ["https://api.anthropic.com/*"],
+	"web_accessible_resources": [
+		{
+			"resources": ["_favicon/*"],
+			"matches": ["<all_urls>"]
+		}
+	],
 	"background": {
 		"service_worker": "background.js"
 	},
