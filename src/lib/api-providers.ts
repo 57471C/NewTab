@@ -1,27 +1,42 @@
+export interface ChatTurn {
+	role: "user" | "assistant" | "system";
+	content: string;
+}
+
 export interface ProviderConfig {
 	endpoint: string;
 	headers: Record<string, string>;
 	payload: Record<string, unknown>;
 }
 
+const HISTORY_LIMIT = 20;
+
+function visibleTurns(messages: ChatTurn[]): ChatTurn[] {
+	return messages
+		.filter((message) => message.role !== "system" && message.content.trim())
+		.slice(-HISTORY_LIMIT);
+}
+
 export function getProviderConfig(
 	model: string,
 	apiKey: string,
-	prompt: string,
+	messages: ChatTurn[],
 ): ProviderConfig {
-	let endpoint = "";
-	let payload: Record<string, unknown> = {};
+	const turns = visibleTurns(messages);
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
 	};
+
+	let endpoint = "";
+	let payload: Record<string, unknown> = {};
 
 	if (model.startsWith("grok")) {
 		endpoint = "https://api.x.ai/v1/chat/completions";
 		headers.Authorization = `Bearer ${apiKey}`;
 		payload = {
-			model: model,
+			model,
 			stream: true,
-			messages: [{ role: "user", content: prompt }],
+			messages: turns.map(({ role, content }) => ({ role, content })),
 		};
 	} else if (model === "GPT-4") {
 		endpoint = "https://api.openai.com/v1/chat/completions";
@@ -29,7 +44,7 @@ export function getProviderConfig(
 		payload = {
 			model: "gpt-4o",
 			stream: true,
-			messages: [{ role: "user", content: prompt }],
+			messages: turns.map(({ role, content }) => ({ role, content })),
 		};
 	} else if (model === "Claude") {
 		endpoint = "https://api.anthropic.com/v1/messages";
@@ -39,14 +54,17 @@ export function getProviderConfig(
 			model: "claude-3-5-sonnet-latest",
 			stream: true,
 			max_tokens: 1024,
-			messages: [{ role: "user", content: prompt }],
+			messages: turns.map(({ role, content }) => ({ role, content })),
 		};
 	} else if (model === "Gemini") {
 		endpoint =
 			"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse";
 		headers["x-goog-api-key"] = apiKey;
 		payload = {
-			contents: [{ parts: [{ text: prompt }] }],
+			contents: turns.map((turn) => ({
+				role: turn.role === "assistant" ? "model" : "user",
+				parts: [{ text: turn.content }],
+			})),
 		};
 	}
 

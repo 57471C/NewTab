@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getProviderConfig } from "../lib/api-providers";
-import { db } from "../lib/db";
+import { appendMessage, db } from "../lib/db";
 import { extractTokenFromChunk } from "../lib/streaming";
 import { vault } from "../lib/vault";
 
@@ -28,18 +28,20 @@ export function useStreamingChat() {
 				);
 			}
 
-			await db.messages.add({
-				chatId,
-				role: "user",
-				content: prompt,
-				timestamp: Date.now(),
-			});
+			const prior = await db.messages
+				.where("chatId")
+				.equals(chatId)
+				.sortBy("timestamp");
 
-			const { endpoint, headers, payload } = getProviderConfig(
-				model,
-				apiKey,
-				prompt,
-			);
+			await appendMessage(chatId, "user", prompt);
+
+			const { endpoint, headers, payload } = getProviderConfig(model, apiKey, [
+				...prior.map((message) => ({
+					role: message.role,
+					content: message.content,
+				})),
+				{ role: "user", content: prompt },
+			]);
 
 			let finalError: Error | null = null;
 			const decoder = new TextDecoder("utf-8");
@@ -92,12 +94,7 @@ export function useStreamingChat() {
 						} else if (msg.type === "chunk") {
 							processChunk(msg.value);
 						} else if (msg.type === "done") {
-							await db.messages.add({
-								chatId,
-								role: "assistant",
-								content: assistantContent,
-								timestamp: Date.now(),
-							});
+							await appendMessage(chatId, "assistant", assistantContent);
 							resolve();
 						}
 					});
@@ -129,12 +126,7 @@ export function useStreamingChat() {
 					processChunk(chunk);
 				}
 
-				await db.messages.add({
-					chatId,
-					role: "assistant",
-					content: assistantContent,
-					timestamp: Date.now(),
-				});
+				await appendMessage(chatId, "assistant", assistantContent);
 			}
 		} catch (error: unknown) {
 			let errorMessage =
@@ -165,12 +157,7 @@ export function useStreamingChat() {
 			const contentWithErr = `${assistantContent}\n\nError: ${errorMessage}`;
 			setStreamingContent(contentWithErr);
 
-			db.messages.add({
-				chatId,
-				role: "assistant",
-				content: contentWithErr,
-				timestamp: Date.now(),
-			});
+			await appendMessage(chatId, "assistant", contentWithErr);
 		} finally {
 			setIsStreaming(false);
 			setStreamingChatId(null);
