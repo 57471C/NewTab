@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getProviderConfig } from "../lib/api-providers";
+import { getProviderConfig, resolveProvider } from "../lib/api-providers";
 import { appendMessage, db } from "../lib/db";
 import { extractTokenFromChunk } from "../lib/streaming";
 import { vault } from "../lib/vault";
@@ -20,11 +20,11 @@ export function useStreamingChat() {
 		let apiKey: string | null = null;
 		let assistantContent = "";
 		try {
-			const provider = model.startsWith("grok") ? "Grok" : model;
+			const provider = resolveProvider(model);
 			apiKey = await vault.get(provider);
 			if (!apiKey) {
 				throw new Error(
-					`API key for ${model} is missing. Please configure it in settings.`,
+					`API key for ${provider} is missing. Please configure it in settings.`,
 				);
 			}
 
@@ -72,11 +72,7 @@ export function useStreamingChat() {
 				}
 			};
 
-			if (
-				model === "Claude" &&
-				typeof chrome !== "undefined" &&
-				chrome.runtime
-			) {
+			if (provider === "Claude" && typeof chrome !== "undefined" && chrome.runtime) {
 				await new Promise<void>((resolve, reject) => {
 					const port = chrome.runtime.connect({ name: "anthropic-proxy" });
 					port.postMessage({
