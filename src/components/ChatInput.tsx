@@ -1,8 +1,11 @@
-import { ArrowUp, Globe, Paperclip, X } from "lucide-react";
+import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import bingLogo from "../assets/bing.svg";
 import chatgptLogo from "../assets/ChatGPT.svg";
 import claudeLogo from "../assets/claude.svg";
+import duckduckgoLogo from "../assets/duckduckgo.svg";
 import geminiLogo from "../assets/gemini.svg";
+import googleLogo from "../assets/google.svg";
 import grokLogo from "../assets/grok.svg";
 import { type ProviderId, resolveProvider } from "../lib/api-providers";
 import {
@@ -12,6 +15,12 @@ import {
 } from "../lib/attachments";
 import { prefs } from "../lib/prefs";
 import { PROVIDER_IDS, vault } from "../lib/vault";
+
+const SEARCH_ENGINES = [
+	{ label: "Google", icon: googleLogo },
+	{ label: "DuckDuckGo", icon: duckduckgoLogo },
+	{ label: "Bing", icon: bingLogo },
+] as const;
 
 const AI_MODELS = [
 	{
@@ -245,6 +254,9 @@ export default function ChatInput({
 
 	const selectedModel =
 		AI_MODELS.find((m) => m.value === aiModel) || AI_MODELS[0];
+	const selectedEngine =
+		SEARCH_ENGINES.find((engine) => engine.label === searchEngine) ||
+		SEARCH_ENGINES[0];
 	const selectedReady = readyProviders.has(resolveProvider(selectedModel.value));
 
 	return (
@@ -333,19 +345,28 @@ export default function ChatInput({
 								}}
 								className={chipClass}
 							>
-								<Globe size={14} />
-								<span>{searchEngine}</span>
+								<img
+									src={selectedEngine.icon}
+									alt={`${selectedEngine.label} logo`}
+									className="h-[14px] w-[14px] object-contain"
+								/>
+								<span>{selectedEngine.label}</span>
 							</button>
 							{isSearchMenuOpen && (
-								<div className={`${menuClass} left-0 w-36`}>
-									{["Google", "DuckDuckGo", "Bing"].map((engine) => (
+								<div className={`${menuClass} left-0 w-44`}>
+									{SEARCH_ENGINES.map((engine) => (
 										<button
-											key={engine}
+											key={engine.label}
 											type="button"
-											onClick={() => selectEngine(engine)}
-											className="block w-full px-3 py-2 text-left text-xs text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+											onClick={() => selectEngine(engine.label)}
+											className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 										>
-											{engine}
+											<img
+												src={engine.icon}
+												alt={`${engine.label} logo`}
+												className="h-[14px] w-[14px] object-contain"
+											/>
+											<span>{engine.label}</span>
 										</button>
 									))}
 								</div>
