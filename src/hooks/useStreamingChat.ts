@@ -141,23 +141,23 @@ export function useStreamingChat() {
 				error instanceof Error ? error.message : "Unknown failure";
 
 			if (apiKey) {
-				errorMessage = errorMessage.split(apiKey).join("[REDACTED]");
+				errorMessage = errorMessage.replaceAll(apiKey, "[REDACTED]");
 			}
 
 			let errorLog = error;
 			if (error instanceof Error && apiKey) {
 				const sanitizedError = new Error(errorMessage);
-				sanitizedError.stack = error.stack?.split(apiKey).join("[REDACTED]");
+				sanitizedError.stack = error.stack?.replaceAll(apiKey, "[REDACTED]");
 				errorLog = sanitizedError;
 			} else if (typeof error === "string" && apiKey) {
-				errorLog = error.split(apiKey).join("[REDACTED]");
+				errorLog = error.replaceAll(apiKey, "[REDACTED]");
 			} else if (apiKey) {
 				try {
 					errorLog = JSON.parse(
-						JSON.stringify(error).split(apiKey).join("[REDACTED]"),
+						JSON.stringify(error).replaceAll(apiKey, "[REDACTED]"),
 					);
 				} catch {
-					errorLog = String(error).split(apiKey).join("[REDACTED]");
+					errorLog = String(error).replaceAll(apiKey, "[REDACTED]");
 				}
 			}
 			console.error("Chat streaming error:", errorLog);
