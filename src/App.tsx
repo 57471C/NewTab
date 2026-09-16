@@ -20,6 +20,11 @@ import { useChatSessions } from "./hooks/useChatSessions";
 import { useStreamingChat } from "./hooks/useStreamingChat";
 import type { ChatAttachment } from "./lib/attachments";
 import { db, reorderShortcuts, saveShortcut } from "./lib/db";
+import { prefs } from "./lib/prefs";
+
+function applyTheme(dark: boolean) {
+	document.documentElement.classList.toggle("dark", dark);
+}
 
 function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -167,12 +172,46 @@ function App() {
 	};
 
 	useEffect(() => {
-		if (isDarkMode) {
-			document.documentElement.classList.add("dark");
-		} else {
-			document.documentElement.classList.remove("dark");
+		let cancelled = false;
+		void prefs.getTheme().then((theme) => {
+			if (cancelled) return;
+			const dark = theme !== "light";
+			setIsDarkMode(dark);
+			applyTheme(dark);
+		});
+
+		if (typeof chrome === "undefined" || !chrome.storage?.onChanged) {
+			return () => {
+				cancelled = true;
+			};
 		}
+
+		const onChange = (
+			changes: Record<string, chrome.storage.StorageChange>,
+			area: string,
+		) => {
+			if (area !== "local" || !changes["prefs.theme"]) return;
+			const next = changes["prefs.theme"].newValue === "light" ? false : true;
+			setIsDarkMode(next);
+			applyTheme(next);
+		};
+		chrome.storage.onChanged.addListener(onChange);
+		return () => {
+			cancelled = true;
+			chrome.storage.onChanged.removeListener(onChange);
+		};
+	}, []);
+
+	useEffect(() => {
+		applyTheme(isDarkMode);
 	}, [isDarkMode]);
+
+	const toggleTheme = () => {
+		const next = !isDarkMode;
+		setIsDarkMode(next);
+		applyTheme(next);
+		void prefs.setTheme(next ? "dark" : "light");
+	};
 
 	return (
 		<div className="flex h-screen w-screen overflow-hidden bg-zinc-50 text-zinc-950 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-50">
@@ -262,7 +301,7 @@ function App() {
 						icon={isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
 						label={isDarkMode ? "Light Mode" : "Dark Mode"}
 						expanded={isExpanded}
-						onClick={() => setIsDarkMode(!isDarkMode)}
+						onClick={toggleTheme}
 					/>
 					<SidebarItem
 						icon={<Settings size={20} />}
