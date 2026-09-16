@@ -9,11 +9,10 @@ interface ChatFeedProps {
 }
 
 function MessageFormatter({ content }: { content: string }) {
-	// Split string at code block boundaries safely
 	const blocks = content.split(/(```[\s\S]*?```)/g);
 
 	return (
-		<div className="text-sm text-zinc-200 leading-relaxed">
+		<div className="text-sm text-zinc-800 leading-relaxed dark:text-zinc-200">
 			{blocks.map((block, i) => {
 				if (block.startsWith("```") && block.endsWith("```")) {
 					const match = block.match(/^```(\w*)\n?([\s\S]*?)```$/);
@@ -21,7 +20,7 @@ function MessageFormatter({ content }: { content: string }) {
 					return (
 						<div
 							key={`code-${i}`}
-							className="my-3 select-all overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-300"
+							className="my-3 select-all overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-100 p-4 font-mono text-xs text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
 						>
 							<pre>
 								<code>{code}</code>
@@ -30,7 +29,6 @@ function MessageFormatter({ content }: { content: string }) {
 					);
 				}
 
-				// Parse inline bold
 				const inlineParts = block.split(/(\*\*[\s\S]*?\*\*)/g);
 				return (
 					<span key={`text-${i}`} className="whitespace-pre-wrap">
@@ -39,7 +37,7 @@ function MessageFormatter({ content }: { content: string }) {
 								return (
 									<strong
 										key={`bold-${j}`}
-										className="font-semibold text-zinc-50"
+										className="font-semibold text-zinc-950 dark:text-zinc-50"
 									>
 										{ip.slice(2, -2)}
 									</strong>
@@ -56,7 +54,11 @@ function MessageFormatter({ content }: { content: string }) {
 
 const MemoizedMessageFormatter = memo(MessageFormatter);
 
-export default function ChatFeed({ activeChatId, isStreaming, streamingContent }: ChatFeedProps) {
+export default function ChatFeed({
+	activeChatId,
+	isStreaming,
+	streamingContent,
+}: ChatFeedProps) {
 	const dbMessages = useLiveQuery(
 		() => db.messages.where("chatId").equals(activeChatId).sortBy("timestamp"),
 		[activeChatId],
@@ -78,7 +80,7 @@ export default function ChatFeed({ activeChatId, isStreaming, streamingContent }
 		if (isAutoScroll && anchorRef.current) {
 			anchorRef.current.scrollIntoView({ behavior: "smooth" });
 		}
-	}, [isAutoScroll]);
+	}, [isAutoScroll, dbMessages, streamingContent]);
 
 	if (!dbMessages || (dbMessages.length === 0 && !isStreaming)) {
 		return (
@@ -105,13 +107,13 @@ export default function ChatFeed({ activeChatId, isStreaming, streamingContent }
 						className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
 					>
 						{msg.role === "user" ? (
-							<div className="max-w-xl rounded-2xl border border-zinc-800/40 bg-zinc-850 px-4 py-2 text-sm text-zinc-100">
+							<div className="max-w-xl rounded-2xl border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm text-zinc-900 dark:border-zinc-800/40 dark:bg-zinc-800 dark:text-zinc-100">
 								<p className="whitespace-pre-wrap leading-relaxed">
 									{msg.content}
 								</p>
 							</div>
 						) : (
-							<div className="w-full bg-transparent py-4 text-sm text-zinc-200">
+							<div className="w-full bg-transparent py-4 text-sm">
 								<MemoizedMessageFormatter content={msg.content} />
 							</div>
 						)}
@@ -119,7 +121,7 @@ export default function ChatFeed({ activeChatId, isStreaming, streamingContent }
 				))}
 				{isStreaming && streamingContent && (
 					<div className="flex w-full justify-start">
-						<div className="w-full bg-transparent py-4 text-sm text-zinc-200">
+						<div className="w-full bg-transparent py-4 text-sm">
 							<MemoizedMessageFormatter content={streamingContent} />
 						</div>
 					</div>

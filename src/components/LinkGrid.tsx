@@ -33,7 +33,6 @@ const isPublicDomain = (hostname: string) => {
 		return false;
 	}
 
-	// IPv4 checks
 	const ipv4Match = lowerHost.match(
 		/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
 	);
@@ -51,7 +50,6 @@ const isPublicDomain = (hostname: string) => {
 		}
 	}
 
-	// IPv6 checks
 	if (lowerHost.includes(":")) {
 		const ipv6 = lowerHost.replace(/^\[|\]$/g, "");
 		if (
@@ -158,11 +156,11 @@ export default function LinkGrid({
 						onDragOver={handleDragOver}
 						onDrop={(e) => handleDrop(e, i)}
 						onDragEnd={handleDragEnd}
-						className={`flex aspect-square cursor-grab flex-col items-center justify-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4 transition-all duration-200 hover:border-zinc-700 active:cursor-grabbing ${
+						className={`flex aspect-square cursor-grab flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 ${
 							isDragging ? "scale-95 opacity-40" : "opacity-100"
 						}`}
 					>
-						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800 shadow-inner">
+						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 shadow-inner dark:bg-zinc-800">
 							{faviconUrl ? (
 								<img
 									src={faviconUrl}
@@ -175,10 +173,10 @@ export default function LinkGrid({
 							) : link.url ? (
 								<Globe size={24} className="text-zinc-500" />
 							) : (
-								<Plus size={24} className="text-zinc-700" />
+								<Plus size={24} className="text-zinc-400 dark:text-zinc-700" />
 							)}
 						</div>
-						<span className="w-full truncate text-center font-medium text-xs text-zinc-300">
+						<span className="w-full truncate text-center font-medium text-xs text-zinc-700 dark:text-zinc-300">
 							{link.title || "Add Link"}
 						</span>
 					</a>

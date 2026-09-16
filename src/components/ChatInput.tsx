@@ -1,8 +1,11 @@
-import { ArrowUp, Globe, Paperclip, X } from "lucide-react";
+import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import bingLogo from "../assets/bing.svg";
 import chatgptLogo from "../assets/ChatGPT.svg";
 import claudeLogo from "../assets/claude.svg";
+import duckduckgoLogo from "../assets/duckduckgo.svg";
 import geminiLogo from "../assets/gemini.svg";
+import googleLogo from "../assets/google.svg";
 import grokLogo from "../assets/grok.svg";
 import { type ProviderId, resolveProvider } from "../lib/api-providers";
 import {
@@ -12,6 +15,12 @@ import {
 } from "../lib/attachments";
 import { prefs } from "../lib/prefs";
 import { PROVIDER_IDS, vault } from "../lib/vault";
+
+const SEARCH_ENGINES = [
+	{ label: "Google", icon: googleLogo },
+	{ label: "DuckDuckGo", icon: duckduckgoLogo },
+	{ label: "Bing", icon: bingLogo },
+] as const;
 
 const AI_MODELS = [
 	{
@@ -76,6 +85,11 @@ function firstReadyModel(ready: Set<ProviderId>, preferred?: string | null) {
 	);
 	return available?.value ?? AI_MODELS[0].value;
 }
+
+const chipClass =
+	"flex cursor-pointer items-center gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 font-medium text-xs text-zinc-700 transition-colors hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-600";
+const menuClass =
+	"absolute bottom-full mb-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900";
 
 export default function ChatInput({
 	onSubmit,
@@ -240,6 +254,9 @@ export default function ChatInput({
 
 	const selectedModel =
 		AI_MODELS.find((m) => m.value === aiModel) || AI_MODELS[0];
+	const selectedEngine =
+		SEARCH_ENGINES.find((engine) => engine.label === searchEngine) ||
+		SEARCH_ENGINES[0];
 	const selectedReady = readyProviders.has(resolveProvider(selectedModel.value));
 
 	return (
@@ -253,14 +270,14 @@ export default function ChatInput({
 					e.preventDefault();
 					void addFiles([...e.dataTransfer.files]);
 				}}
-				className="mx-auto flex w-full max-w-2xl flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900 p-3 shadow-xl transition-all focus-within:border-zinc-700"
+				className="mx-auto flex w-full max-w-2xl flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-3 shadow-xl transition-all focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-700"
 			>
 				{attachments.length > 0 && (
 					<div className="flex flex-wrap gap-2">
 						{attachments.map((attachment) => (
 							<div
 								key={attachment.id}
-								className="relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-700"
+								className="relative h-14 w-14 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700"
 							>
 								<img
 									src={attachment.dataUrl}
@@ -284,7 +301,7 @@ export default function ChatInput({
 					</div>
 				)}
 				{attachError && (
-					<p className="px-1 text-[11px] text-red-400">{attachError}</p>
+					<p className="px-1 text-[11px] text-red-500 dark:text-red-400">{attachError}</p>
 				)}
 				<textarea
 					name="chat-input"
@@ -292,13 +309,13 @@ export default function ChatInput({
 					onChange={handleInputResize}
 					onKeyDown={handleKeyDown}
 					onPaste={handlePaste}
-					className="w-full resize-none border-0 bg-transparent p-1 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:ring-0"
+					className="w-full resize-none border-0 bg-transparent p-1 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder-zinc-500"
 					placeholder="Ask anything or type a web address..."
 					rows={1}
 					style={{ maxHeight: "200px" }}
 				/>
 
-				<div className="flex w-full items-center justify-between border-zinc-800/40 border-t pt-1.5">
+				<div className="flex w-full items-center justify-between border-zinc-200 border-t pt-1.5 dark:border-zinc-800/40">
 					<div className="flex items-center gap-2">
 						<input
 							ref={fileInputRef}
@@ -314,7 +331,7 @@ export default function ChatInput({
 						<button
 							type="button"
 							onClick={() => fileInputRef.current?.click()}
-							className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
+							className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-300"
 							title="Attach images"
 						>
 							<Paperclip size={16} />
@@ -326,21 +343,30 @@ export default function ChatInput({
 									setIsSearchMenuOpen(!isSearchMenuOpen);
 									setIsModelMenuOpen(false);
 								}}
-								className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-850 px-2.5 py-1 font-medium text-xs text-zinc-300 transition-colors hover:border-zinc-700"
+								className={chipClass}
 							>
-								<Globe size={14} />
-								<span>{searchEngine}</span>
+								<img
+									src={selectedEngine.icon}
+									alt={`${selectedEngine.label} logo`}
+									className="h-[14px] w-[14px] object-contain"
+								/>
+								<span>{selectedEngine.label}</span>
 							</button>
 							{isSearchMenuOpen && (
-								<div className="absolute bottom-full left-0 mb-2 w-36 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
-									{["Google", "DuckDuckGo", "Bing"].map((engine) => (
+								<div className={`${menuClass} left-0 w-44`}>
+									{SEARCH_ENGINES.map((engine) => (
 										<button
-											key={engine}
+											key={engine.label}
 											type="button"
-											onClick={() => selectEngine(engine)}
-											className="block w-full px-3 py-2 text-left text-xs text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+											onClick={() => selectEngine(engine.label)}
+											className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 										>
-											{engine}
+											<img
+												src={engine.icon}
+												alt={`${engine.label} logo`}
+												className="h-[14px] w-[14px] object-contain"
+											/>
+											<span>{engine.label}</span>
 										</button>
 									))}
 								</div>
@@ -356,21 +382,19 @@ export default function ChatInput({
 									setIsModelMenuOpen(!isModelMenuOpen);
 									setIsSearchMenuOpen(false);
 								}}
-								className={`flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-850 px-2.5 py-1 font-medium text-xs transition-colors hover:border-zinc-700 ${
-									selectedReady ? "text-zinc-300" : "text-zinc-500"
-								}`}
+								className={`${chipClass} ${selectedReady ? "" : "text-zinc-400 dark:text-zinc-500"}`}
 							>
 								<img
 									src={selectedModel.icon}
 									alt={`${selectedModel.label} logo`}
 									className={`h-[14px] w-[14px] object-contain ${
-										selectedModel.invert ? "invert dark:invert" : ""
+										selectedModel.invert ? "dark:invert" : ""
 									} ${selectedReady ? "" : "opacity-40"}`}
 								/>
 								<span>{selectedModel.label}</span>
 							</button>
 							{isModelMenuOpen && (
-								<div className="absolute right-0 bottom-full mb-2 max-h-80 w-56 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
+								<div className={`${menuClass} right-0 max-h-80 w-56 overflow-y-auto`}>
 									{AI_MODELS.map((model) => {
 										const ready = readyProviders.has(
 											resolveProvider(model.value),
@@ -387,20 +411,20 @@ export default function ChatInput({
 												}}
 												className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
 													ready
-														? "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-														: "cursor-not-allowed text-zinc-600"
+														? "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+														: "cursor-not-allowed text-zinc-400 dark:text-zinc-600"
 												}`}
 											>
 												<img
 													src={model.icon}
 													alt={`${model.label} logo`}
 													className={`h-[14px] w-[14px] object-contain ${
-														model.invert ? "invert dark:invert" : ""
+														model.invert ? "dark:invert" : ""
 													} ${ready ? "" : "opacity-30"}`}
 												/>
 												<span className="flex-1 truncate">{model.label}</span>
 												{!ready && (
-													<span className="text-[10px] text-zinc-600">No key</span>
+													<span className="text-[10px] text-zinc-400 dark:text-zinc-600">No key</span>
 												)}
 											</button>
 										);
@@ -411,7 +435,7 @@ export default function ChatInput({
 						<button
 							type="button"
 							onClick={() => handleSubmitInternal(false)}
-							className="rounded-full bg-zinc-100 p-1.5 text-zinc-950 shadow-md transition-all hover:bg-white active:scale-95"
+							className="rounded-full bg-zinc-900 p-1.5 text-zinc-50 shadow-md transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
 						>
 							<ArrowUp size={16} strokeWidth={3} />
 						</button>
