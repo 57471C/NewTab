@@ -1,4 +1,4 @@
-import { ArrowUp, Globe, Mic, Paperclip, X } from "lucide-react";
+import { ArrowUp, Globe, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import chatgptLogo from "../assets/ChatGPT.svg";
 import claudeLogo from "../assets/claude.svg";
@@ -408,13 +408,6 @@ export default function ChatInput({
 								</div>
 							)}
 						</div>
-						<button
-							type="button"
-							className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
-							title="Voice input is not wired yet"
-						>
-							<Mic size={16} />
-						</button>
 						<button
 							type="button"
 							onClick={() => handleSubmitInternal(false)}
