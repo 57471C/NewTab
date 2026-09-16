@@ -4,6 +4,9 @@ import chatgptLogo from "../assets/ChatGPT.svg";
 import claudeLogo from "../assets/claude.svg";
 import geminiLogo from "../assets/gemini.svg";
 import grokLogo from "../assets/grok.svg";
+import { type ProviderId, resolveProvider } from "../lib/api-providers";
+import { prefs } from "../lib/prefs";
+import { PROVIDER_IDS, vault } from "../lib/vault";
 
 const AI_MODELS = [
 	{
@@ -58,6 +61,17 @@ const AI_MODELS = [
 	{ label: "Grok Build", value: "grok-build-0.1", icon: grokLogo },
 ];
 
+function firstReadyModel(ready: Set<ProviderId>, preferred?: string | null) {
+	if (preferred) {
+		const match = AI_MODELS.find((model) => model.value === preferred);
+		if (match && ready.has(resolveProvider(match.value))) return match.value;
+	}
+	const available = AI_MODELS.find((model) =>
+		ready.has(resolveProvider(model.value)),
+	);
+	return available?.value ?? AI_MODELS[0].value;
+}
+
 export default function ChatInput({
 	onSubmit,
 }: {
@@ -73,6 +87,9 @@ export default function ChatInput({
 	const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
 	const [aiModel, setAiModel] = useState("gemini-3.8-flash");
 	const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+	const [readyProviders, setReadyProviders] = useState<Set<ProviderId>>(
+		new Set(),
+	);
 	const chassisRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -88,6 +105,68 @@ export default function ChatInput({
 		document.addEventListener("mousedown", handleClickOutside);
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		const hydrate = async () => {
+			const [savedModel, savedEngine, configured] = await Promise.all([
+				prefs.getModel(),
+				prefs.getEngine(),
+				vault.configured(),
+			]);
+			if (cancelled) return;
+			setReadyProviders(configured);
+			if (savedEngine) setSearchEngine(savedEngine);
+			setAiModel(firstReadyModel(configured, savedModel));
+		};
+
+		void hydrate();
+
+		if (typeof chrome === "undefined" || !chrome.storage?.onChanged) {
+			return () => {
+				cancelled = true;
+			};
+		}
+
+		const onChange = (
+			changes: Record<string, chrome.storage.StorageChange>,
+			area: string,
+		) => {
+			if (area !== "local") return;
+			if (PROVIDER_IDS.some((provider) => provider in changes)) {
+				void vault.configured().then((configured) => {
+					if (cancelled) return;
+					setReadyProviders(configured);
+					setAiModel((current) => firstReadyModel(configured, current));
+				});
+			}
+			if (changes["prefs.aiModel"]?.newValue) {
+				setAiModel(String(changes["prefs.aiModel"].newValue));
+			}
+			if (changes["prefs.searchEngine"]?.newValue) {
+				setSearchEngine(String(changes["prefs.searchEngine"].newValue));
+			}
+		};
+
+		chrome.storage.onChanged.addListener(onChange);
+		return () => {
+			cancelled = true;
+			chrome.storage.onChanged.removeListener(onChange);
+		};
+	}, []);
+
+	const selectModel = (model: string) => {
+		setAiModel(model);
+		setIsModelMenuOpen(false);
+		void prefs.setModel(model);
+	};
+
+	const selectEngine = (engine: string) => {
+		setSearchEngine(engine);
+		setIsSearchMenuOpen(false);
+		void prefs.setEngine(engine);
+	};
 
 	const handleInputResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		setInputValue(e.target.value);
@@ -119,6 +198,7 @@ export default function ChatInput({
 
 	const selectedModel =
 		AI_MODELS.find((m) => m.value === aiModel) || AI_MODELS[0];
+	const selectedReady = readyProviders.has(resolveProvider(selectedModel.value));
 
 	return (
 		<div className="mx-auto w-full max-w-3xl px-4 pb-8">
@@ -163,10 +243,7 @@ export default function ChatInput({
 										<button
 											key={engine}
 											type="button"
-											onClick={() => {
-												setSearchEngine(engine);
-												setIsSearchMenuOpen(false);
-											}}
+											onClick={() => selectEngine(engine)}
 											className="block w-full px-3 py-2 text-left text-xs text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
 										>
 											{engine}
@@ -185,39 +262,55 @@ export default function ChatInput({
 									setIsModelMenuOpen(!isModelMenuOpen);
 									setIsSearchMenuOpen(false);
 								}}
-								className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-850 px-2.5 py-1 font-medium text-xs text-zinc-300 transition-colors hover:border-zinc-700"
+								className={`flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-850 px-2.5 py-1 font-medium text-xs transition-colors hover:border-zinc-700 ${
+									selectedReady ? "text-zinc-300" : "text-zinc-500"
+								}`}
 							>
 								<img
 									src={selectedModel.icon}
 									alt={`${selectedModel.label} logo`}
 									className={`h-[14px] w-[14px] object-contain ${
 										selectedModel.invert ? "invert dark:invert" : ""
-									}`}
+									} ${selectedReady ? "" : "opacity-40"}`}
 								/>
 								<span>{selectedModel.label}</span>
 							</button>
 							{isModelMenuOpen && (
 								<div className="absolute right-0 bottom-full mb-2 max-h-80 w-56 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
-									{AI_MODELS.map((model) => (
-										<button
-											key={model.value}
-											type="button"
-											onClick={() => {
-												setAiModel(model.value);
-												setIsModelMenuOpen(false);
-											}}
-											className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-										>
-											<img
-												src={model.icon}
-												alt={`${model.label} logo`}
-												className={`h-[14px] w-[14px] object-contain ${
-													model.invert ? "invert dark:invert" : ""
+									{AI_MODELS.map((model) => {
+										const ready = readyProviders.has(
+											resolveProvider(model.value),
+										);
+										return (
+											<button
+												key={model.value}
+												type="button"
+												disabled={!ready}
+												title={ready ? undefined : "Add an API key in Settings"}
+												onClick={() => {
+													if (!ready) return;
+													selectModel(model.value);
+												}}
+												className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
+													ready
+														? "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+														: "cursor-not-allowed text-zinc-600"
 												}`}
-											/>
-											{model.label}
-										</button>
-									))}
+											>
+												<img
+													src={model.icon}
+													alt={`${model.label} logo`}
+													className={`h-[14px] w-[14px] object-contain ${
+														model.invert ? "invert dark:invert" : ""
+													} ${ready ? "" : "opacity-30"}`}
+												/>
+												<span className="flex-1 truncate">{model.label}</span>
+												{!ready && (
+													<span className="text-[10px] text-zinc-600">No key</span>
+												)}
+											</button>
+										);
+									})}
 								</div>
 							)}
 						</div>
