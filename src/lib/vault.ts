@@ -1,11 +1,15 @@
 /// <reference types="chrome" />
 
+import type { ProviderId } from "./api-providers";
+
 /**
  * Persistent vault for API keys.
  * Uses chrome.storage.local inside the extension so keys survive restarts,
  * with an in-memory fallback for Vite / plain-browser debugging.
  */
 const memoryVault = new Map<string, string>();
+
+export const PROVIDER_IDS: ProviderId[] = ["Grok", "Gemini", "Claude", "GPT-4"];
 
 function hasLocalStore(): boolean {
 	return typeof chrome !== "undefined" && Boolean(chrome.storage?.local);
@@ -51,5 +55,25 @@ export const vault = {
 			return;
 		}
 		memoryVault.delete(provider);
+	},
+	async configured(): Promise<Set<ProviderId>> {
+		const ready = new Set<ProviderId>();
+		if (hasLocalStore()) {
+			try {
+				const res = await chrome.storage.local.get(PROVIDER_IDS);
+				for (const provider of PROVIDER_IDS) {
+					if (typeof res[provider] === "string" && res[provider].length > 0) {
+						ready.add(provider);
+					}
+				}
+			} catch (err) {
+				console.error("Vault list error:", err);
+			}
+			return ready;
+		}
+		for (const provider of PROVIDER_IDS) {
+			if (memoryVault.get(provider)) ready.add(provider);
+		}
+		return ready;
 	},
 };
