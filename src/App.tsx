@@ -1,25 +1,18 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-	ArrowUp,
-	Globe,
 	Grid,
 	History,
 	MessageSquare,
-	Mic,
 	Moon,
-	Paperclip,
 	Plus,
 	Settings,
 	Sun,
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import chatgptLogo from "./assets/ChatGPT.svg";
-import claudeLogo from "./assets/claude.svg";
-import geminiLogo from "./assets/gemini.svg";
-import grokLogo from "./assets/grok.svg";
 import reactLogo from "./assets/react.svg";
 import ChatFeed from "./components/ChatFeed";
+import ChatInput from "./components/ChatInput";
 import LinkGrid from "./components/LinkGrid";
 import SettingsModal from "./components/SettingsModal";
 import Toast from "./components/Toast";
@@ -36,33 +29,14 @@ function App() {
 		message: string;
 	} | null>(null);
 	const toastTimeoutRef = useRef<number | null>(null);
-	const [inputValue, setInputValue] = useState("");
 	const [isChatActive, setIsChatActive] = useState(false);
-	const [searchEngine, setSearchEngine] = useState("Google");
-	const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
-	const [aiModel, setAiModel] = useState("Gemini");
-	const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
 	const [activeChatId, setActiveChatId] = useState<string | null>(null);
-	const chassisRef = useRef<HTMLDivElement>(null);
 
-	const AI_MODELS = [
-		{ label: "Gemini", value: "Gemini", icon: geminiLogo },
-		{ label: "Claude", value: "Claude", icon: claudeLogo },
-		{ label: "GPT-4", value: "GPT-4", icon: chatgptLogo, invert: true },
-		{ label: "Grok 4.3 (Flagship)", value: "grok-4.3", icon: grokLogo },
-		{
-			label: "Grok 4.20 (Fast)",
-			value: "grok-4.20-non-reasoning",
-			icon: grokLogo,
-		},
-		{ label: "Grok 3 (Reasoning)", value: "grok-3", icon: grokLogo },
-	];
-
-	const { streamChat, isStreaming, streamingContent, streamingChatId } = useStreamingChat();
+	const { streamChat, isStreaming, streamingContent, streamingChatId } =
+		useStreamingChat();
 
 	const handleNewChat = () => {
 		setIsChatActive(false);
-		setInputValue("");
 		setActiveChatId(null);
 	};
 
@@ -87,20 +61,6 @@ function App() {
 	};
 
 	const chatSessions = useChatSessions();
-
-	useEffect(() => {
-		const handleClickOutside = (e: MouseEvent) => {
-			if (
-				chassisRef.current &&
-				!chassisRef.current.contains(e.target as Node)
-			) {
-				setIsSearchMenuOpen(false);
-				setIsModelMenuOpen(false);
-			}
-		};
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, []);
 
 	// Core Link Storage Layer
 	const rawLinks = useLiveQuery(() =>
@@ -161,18 +121,15 @@ function App() {
 		await reorderShortcuts(sourceIndex, targetIndex);
 	};
 
-	const handleInputResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-		setInputValue(e.target.value);
-		e.target.style.height = "auto";
-		e.target.style.height = `${e.target.scrollHeight}px`;
-	};
-
-	const handleSubmit = async (forceChat = false) => {
-		if (!inputValue.trim()) return;
-		const currentQuery = inputValue;
+	const handleSubmit = async (
+		currentQuery: string,
+		searchEngine: string,
+		aiModel: string,
+		forceChat = false,
+	) => {
+		if (!currentQuery.trim()) return;
 
 		if (forceChat || isChatActive) {
-			setInputValue("");
 			setIsChatActive(true);
 
 			// Generate a unique session token if it doesn't exist yet
@@ -192,13 +149,6 @@ function App() {
 		}
 	};
 
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-		if (e.key === "Enter" && !e.shiftKey) {
-			e.preventDefault();
-			handleSubmit(e.metaKey || e.ctrlKey);
-		}
-	};
-
 	// Apply the dark mode class token to the HTML root
 	useEffect(() => {
 		if (isDarkMode) {
@@ -207,9 +157,6 @@ function App() {
 			document.documentElement.classList.remove("dark");
 		}
 	}, [isDarkMode]);
-
-	const selectedModel =
-		AI_MODELS.find((m) => m.value === aiModel) || AI_MODELS[0];
 
 	return (
 		<div className="flex h-screen w-screen overflow-hidden bg-zinc-50 text-zinc-950 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-50">
@@ -317,7 +264,9 @@ function App() {
 					<ChatFeed
 						activeChatId={activeChatId || ""}
 						isStreaming={isStreaming && activeChatId === streamingChatId}
-						streamingContent={activeChatId === streamingChatId ? streamingContent : undefined}
+						streamingContent={
+							activeChatId === streamingChatId ? streamingContent : undefined
+						}
 					/>
 				) : (
 					<div className="flex-1 overflow-y-auto p-6">
@@ -325,128 +274,7 @@ function App() {
 					</div>
 				)}
 
-				{/* Compound Input Chassis */}
-				<div className="mx-auto w-full max-w-3xl px-4 pb-8">
-					<div
-						ref={chassisRef}
-						className="mx-auto flex w-full max-w-2xl flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900 p-3 shadow-xl transition-all focus-within:border-zinc-700"
-					>
-						{/* TOP ROW: TEXT ENTRY ZONE */}
-						<textarea
-							name="chat-input"
-							value={inputValue}
-							onChange={handleInputResize}
-							onKeyDown={handleKeyDown}
-							className="w-full resize-none border-0 bg-transparent p-1 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:ring-0"
-							placeholder="Ask anything or type a web address..."
-							rows={1}
-							style={{ maxHeight: "200px" }}
-						/>
-
-						{/* BOTTOM ROW: UTILITY BAR MAPPING */}
-						<div className="flex w-full items-center justify-between border-zinc-800/40 border-t pt-1.5">
-							{/* LEFT ALIGNED ACTIONS */}
-							<div className="flex items-center gap-2">
-								<button
-									type="button"
-									className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
-								>
-									<Paperclip size={16} />
-								</button>
-								<div className="relative">
-									<button
-										type="button"
-										onClick={() => {
-											setIsSearchMenuOpen(!isSearchMenuOpen);
-											setIsModelMenuOpen(false);
-										}}
-										className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-850 px-2.5 py-1 font-medium text-xs text-zinc-300 transition-colors hover:border-zinc-700"
-									>
-										<Globe size={14} />
-										<span>{searchEngine}</span>
-									</button>
-									{isSearchMenuOpen && (
-										<div className="absolute bottom-full left-0 mb-2 w-36 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
-											{["Google", "DuckDuckGo", "Bing"].map((engine) => (
-												<button
-													key={engine}
-													type="button"
-													onClick={() => {
-														setSearchEngine(engine);
-														setIsSearchMenuOpen(false);
-													}}
-													className="block w-full px-3 py-2 text-left text-xs text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-												>
-													{engine}
-												</button>
-											))}
-										</div>
-									)}
-								</div>
-							</div>
-
-							{/* RIGHT ALIGNED ACTIONS */}
-							<div className="flex items-center gap-2">
-								<div className="relative">
-									<button
-										type="button"
-										onClick={() => {
-											setIsModelMenuOpen(!isModelMenuOpen);
-											setIsSearchMenuOpen(false);
-										}}
-										className="flex cursor-pointer items-center gap-1 rounded-full border border-zinc-800 bg-zinc-850 px-2.5 py-1 font-medium text-xs text-zinc-300 transition-colors hover:border-zinc-700"
-									>
-										<img
-											src={selectedModel.icon}
-											alt={`${selectedModel.label} logo`}
-											className={`h-[14px] w-[14px] object-contain ${
-												selectedModel.invert ? "invert dark:invert" : ""
-											}`}
-										/>
-										<span>{selectedModel.label}</span>
-									</button>
-									{isModelMenuOpen && (
-										<div className="absolute right-0 bottom-full mb-2 w-48 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
-											{AI_MODELS.map((model) => (
-												<button
-													key={model.value}
-													type="button"
-													onClick={() => {
-														setAiModel(model.value);
-														setIsModelMenuOpen(false);
-													}}
-													className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-												>
-													<img
-														src={model.icon}
-														alt={`${model.label} logo`}
-														className={`h-[14px] w-[14px] object-contain ${
-															model.invert ? "invert dark:invert" : ""
-														}`}
-													/>
-													{model.label}
-												</button>
-											))}
-										</div>
-									)}
-								</div>
-								<button
-									type="button"
-									className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
-								>
-									<Mic size={16} />
-								</button>
-								<button
-									type="button"
-									onClick={() => handleSubmit(false)}
-									className="rounded-full bg-zinc-100 p-1.5 text-zinc-950 shadow-md transition-all hover:bg-white active:scale-95"
-								>
-									<ArrowUp size={16} strokeWidth={3} />
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
+				<ChatInput onSubmit={handleSubmit} />
 			</main>
 
 			<SettingsModal
