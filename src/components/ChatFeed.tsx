@@ -62,22 +62,6 @@ export default function ChatFeed({ activeChatId, isStreaming, streamingContent }
 		[activeChatId],
 	) as ChatMessage[] | undefined;
 
-	// Inject active streaming content into the messages array layout
-	const messages = [
-		...(dbMessages || []),
-		...(isStreaming && streamingContent
-			? [
-					{
-						id: -1,
-						chatId: activeChatId,
-						role: "assistant" as const,
-						content: streamingContent,
-						timestamp: Date.now(),
-					},
-				]
-			: []),
-	];
-
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const anchorRef = useRef<HTMLDivElement>(null);
 	const [isAutoScroll, setIsAutoScroll] = useState(true);
@@ -96,7 +80,7 @@ export default function ChatFeed({ activeChatId, isStreaming, streamingContent }
 		}
 	}, [isAutoScroll]);
 
-	if (!dbMessages || (messages.length === 0 && !isStreaming)) {
+	if (!dbMessages || (dbMessages.length === 0 && !isStreaming)) {
 		return (
 			<div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
 				<p className="font-medium text-sm text-zinc-500">
@@ -115,7 +99,7 @@ export default function ChatFeed({ activeChatId, isStreaming, streamingContent }
 			className="flex-1 overflow-y-auto p-6"
 		>
 			<div className="mx-auto flex h-full w-full max-w-3xl flex-col gap-6 pb-32">
-				{messages.map((msg) => (
+				{dbMessages.map((msg) => (
 					<div
 						key={msg.id}
 						className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
@@ -133,6 +117,13 @@ export default function ChatFeed({ activeChatId, isStreaming, streamingContent }
 						)}
 					</div>
 				))}
+				{isStreaming && streamingContent && (
+					<div className="flex w-full justify-start">
+						<div className="w-full bg-transparent py-4 text-sm text-zinc-200">
+							<MemoizedMessageFormatter content={streamingContent} />
+						</div>
+					</div>
+				)}
 				{isStreaming && !streamingContent && (
 					<div className="flex items-start">
 						<div className="rounded-xl bg-transparent py-4 text-sm">
