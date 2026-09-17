@@ -8,7 +8,7 @@ export interface Shortcut {
 }
 
 export interface ChatMessage {
-	id?: number;
+	id: string;
 	chatId: string;
 	role: "user" | "assistant" | "system";
 	content: string;
@@ -16,7 +16,7 @@ export interface ChatMessage {
 }
 
 export interface ChatSession {
-	id: string; // chatId
+	id: string;
 	title: string;
 	timestamp: number;
 }
@@ -66,7 +66,12 @@ class NewTabDatabase extends Dexie {
 				}
 			});
 
-		// Seed the database automatically on the first creation using a verification loop
+		this.version(3).stores({
+			shortcuts: "++id, &slotIndex",
+			messages: "id, chatId, timestamp",
+			sessions: "id, timestamp",
+		});
+
 		this.on("ready", async () => {
 			const count = await this.shortcuts.count();
 			if (count === 0) {
@@ -86,11 +91,18 @@ class NewTabDatabase extends Dexie {
 
 export const db = new NewTabDatabase();
 
+async function ensureOpen() {
+	if (!db.isOpen()) {
+		await db.open();
+	}
+}
+
 export async function saveShortcut(
 	slotIndex: number,
 	title: string,
 	url: string,
 ) {
+	await ensureOpen();
 	const existing = await db.shortcuts.where({ slotIndex }).first();
 	if (existing && existing.id !== undefined) {
 		await db.shortcuts.update(existing.id, { title, url });
@@ -104,30 +116,36 @@ export async function appendMessage(
 	role: "user" | "assistant" | "system",
 	content: string,
 ) {
+	await ensureOpen();
+	const safeChatId =
+		typeof chatId === "string" && chatId.trim() !== ""
+			? chatId
+			: crypto.randomUUID();
 	const timestamp = Date.now();
 
 	await db.transaction("rw", db.messages, db.sessions, async () => {
 		await db.messages.add({
-			chatId,
+			id: crypto.randomUUID(),
+			chatId: safeChatId,
 			role,
 			content,
 			timestamp,
 		});
 
-		const session = await db.sessions.get(chatId);
+		const session = await db.sessions.get(safeChatId);
 		if (!session) {
 			await db.sessions.put({
-				id: chatId,
-				title: role === "user" ? content : "New Conversation",
+				id: safeChatId,
+				title: role === "user" ? content.slice(0, 80) : "New Conversation",
 				timestamp,
 			});
 		} else {
 			let newTitle = session.title;
 			if (role === "user" && session.title === "New Conversation") {
-				newTitle = content;
+				newTitle = content.slice(0, 80);
 			}
 			await db.sessions.put({
-				id: chatId,
+				id: safeChatId,
 				title: newTitle,
 				timestamp: Math.max(session.timestamp, timestamp),
 			});
@@ -139,16 +157,15 @@ export async function reorderShortcuts(
 	sourceIndex: number,
 	targetIndex: number,
 ) {
+	await ensureOpen();
 	await db.transaction("rw", db.shortcuts, async () => {
 		const all = await db.shortcuts.orderBy("slotIndex").toArray();
 		const [moved] = all.splice(sourceIndex, 1);
 		all.splice(targetIndex, 0, moved);
 
-		// Temporarily assign negative indices to avoid unique constraint violations during shifts
 		await db.shortcuts.bulkPut(
 			all.map((item, index) => ({ ...item, slotIndex: -1 - index })),
 		);
-		// Now set the correct target indices matching the 0-7 slot layout
 		await db.shortcuts.bulkPut(
 			all.map((item, index) => ({ ...item, slotIndex: index })),
 		);
