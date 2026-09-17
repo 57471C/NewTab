@@ -1,7 +1,7 @@
 {
 	"name": "new-tab",
 	"private": true,
-	"version": "0.0.1",
+	"version": "1.0.4",
 	"type": "module",
 	"scripts": {
 		"icons": "node public/generate-icons.js",
@@ -19,7 +19,6 @@
 		"@biomejs/biome": "^2.4.16",
 		"ai": "^6.0.197",
 		"autoprefixer": "^10.5.0",
-		"canvas": "^3.2.3",
 		"dexie": "^4.4.4",
 		"dexie-react-hooks": "^4.4.0",
 		"lucide-react": "^1.17.0",
@@ -42,14 +41,11 @@
 		"typescript": "~6.0.2",
 		"vite": "^8.0.12"
 	},
-	"description": "This template provides a minimal setup to get React working in Vite with HMR and Biome rules.",
-	"main": "index.js",
+	"description": "Minimalist local-first Chromium new-tab launcher and streaming AI companion.",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/57471C/NewTab.git"
 	},
-	"keywords": [],
-	"author": "",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/57471C/NewTab/issues"
