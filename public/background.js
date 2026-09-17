@@ -1,13 +1,56 @@
 const darkTabs = new Set();
 
-const ICON_OFF = {
-	16: "icon-off-16.png",
-	32: "icon-off-32.png",
-};
-const ICON_ON = {
-	16: "icon-on-16.png",
-	32: "icon-on-32.png",
-};
+function paintIcon(size, on) {
+	const canvas = new OffscreenCanvas(size, size);
+	const ctx = canvas.getContext("2d");
+	const bg = on ? "#F4F4F5" : "#18181B";
+	const fg = on ? "#1D4ED8" : "#22D3EE";
+	const radius = Math.max(3, Math.round(size * 0.22));
+	ctx.fillStyle = bg;
+	if (typeof ctx.roundRect === "function") {
+		ctx.beginPath();
+		ctx.roundRect(0, 0, size, size, radius);
+		ctx.fill();
+	} else {
+		ctx.fillRect(0, 0, size, size);
+	}
+	ctx.strokeStyle = fg;
+	ctx.lineWidth = Math.max(3, Math.round(size * 0.16));
+	ctx.lineCap = "round";
+	const left = size * 0.28;
+	const right = size * 0.72;
+	const top = size * 0.22;
+	const bot = size * 0.78;
+	ctx.beginPath();
+	ctx.moveTo(left, top);
+	ctx.lineTo(left, bot);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(left, top);
+	ctx.lineTo(right, bot);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(right, top);
+	ctx.lineTo(right, bot);
+	ctx.stroke();
+	return ctx.getImageData(0, 0, size, size);
+}
+
+function iconData(on) {
+	return {
+		16: paintIcon(16, on),
+		32: paintIcon(32, on),
+	};
+}
+
+function applyTabIcon(tabId, on) {
+	chrome.action.setIcon({ tabId, imageData: iconData(on) });
+	chrome.action.setBadgeText({ tabId, text: on ? "D" : "" });
+	chrome.action.setBadgeBackgroundColor({
+		tabId,
+		color: on ? "#22D3EE" : "#27272A",
+	});
+}
 
 if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 	chrome.action.onClicked.addListener((tab) => {
@@ -24,15 +67,10 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 		const tabId = tab.id;
 		const nextStateDark = !darkTabs.has(tabId);
 
-		if (nextStateDark) {
-			darkTabs.add(tabId);
-			chrome.action.setIcon({ tabId, path: ICON_ON });
-		} else {
-			darkTabs.delete(tabId);
-			chrome.action.setIcon({ tabId, path: ICON_OFF });
-		}
+		if (nextStateDark) darkTabs.add(tabId);
+		else darkTabs.delete(tabId);
 
-		chrome.action.setBadgeText({ tabId, text: "" });
+		applyTabIcon(tabId, nextStateDark);
 
 		chrome.scripting.executeScript({
 			target: { tabId },
