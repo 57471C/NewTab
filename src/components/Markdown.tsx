@@ -72,14 +72,14 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 
 	return (
 		<div className="my-3 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
-			<div className="flex items-center justify-between border-zinc-200 border-b px-3 py-1.5 dark:border-zinc-800">
-				<span className="font-mono text-[10px] text-zinc-500 uppercase">
+			<div className="flex select-none items-center justify-between gap-3 border-zinc-200 border-b px-3 py-1.5 dark:border-zinc-800">
+				<span className="font-mono text-[10px] text-zinc-500 uppercase tracking-wide">
 					{language || "code"}
 				</span>
 				<button
 					type="button"
 					onClick={() => void copy()}
-					className="text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
+					className="shrink-0 text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
 				>
 					{copied ? "Copied" : "Copy"}
 				</button>
