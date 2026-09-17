@@ -45,11 +45,7 @@ function iconData(on) {
 
 function applyTabIcon(tabId, on) {
 	chrome.action.setIcon({ tabId, imageData: iconData(on) });
-	chrome.action.setBadgeText({ tabId, text: on ? "D" : "" });
-	chrome.action.setBadgeBackgroundColor({
-		tabId,
-		color: on ? "#22D3EE" : "#27272A",
-	});
+	chrome.action.setBadgeText({ tabId, text: "" });
 }
 
 if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
