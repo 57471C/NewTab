@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { type OpenLinksMode, prefs } from "../lib/prefs";
 import type { ShortcutLink } from "../lib/types";
 import Favicon from "./Favicon";
 
@@ -35,6 +36,34 @@ export default function LinkGrid({
 	onReorder: (sourceIndex: number, targetIndex: number) => void;
 }) {
 	const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+	const [openLinks, setOpenLinks] = useState<OpenLinksMode>("same");
+
+	useEffect(() => {
+		let cancelled = false;
+		void prefs.getOpenLinks().then((mode) => {
+			if (!cancelled) setOpenLinks(mode);
+		});
+
+		if (typeof chrome === "undefined" || !chrome.storage?.onChanged) {
+			return () => {
+				cancelled = true;
+			};
+		}
+
+		const onChange = (
+			changes: Record<string, chrome.storage.StorageChange>,
+			area: string,
+		) => {
+			if (area !== "local" || !changes["prefs.openLinks"]) return;
+			const next = changes["prefs.openLinks"].newValue;
+			setOpenLinks(next === "new" ? "new" : "same");
+		};
+		chrome.storage.onChanged.addListener(onChange);
+		return () => {
+			cancelled = true;
+			chrome.storage.onChanged.removeListener(onChange);
+		};
+	}, []);
 
 	const handleDragStart = (e: React.DragEvent, index: number) => {
 		setDraggedIndex(index);
@@ -68,6 +97,8 @@ export default function LinkGrid({
 		setDraggedIndex(null);
 	};
 
+	const openInNewTab = openLinks === "new";
+
 	return (
 		<div className="mx-auto grid w-full max-w-3xl grid-cols-4 gap-4 px-4 py-8">
 			{links.map((link, i) => {
@@ -78,8 +109,8 @@ export default function LinkGrid({
 					<a
 						key={link.id}
 						href={safeUrl}
-						target={safeUrl !== "#" ? "_blank" : "_self"}
-						rel="noreferrer"
+						target={safeUrl !== "#" && openInNewTab ? "_blank" : "_self"}
+						rel={openInNewTab ? "noreferrer" : undefined}
 						draggable={true}
 						onDragStart={(e) => handleDragStart(e, i)}
 						onDragOver={handleDragOver}
