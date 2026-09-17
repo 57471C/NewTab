@@ -15,28 +15,24 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 
 		const tabId = tab.id;
 		const isDarkActive = darkTabs.has(tabId);
-		const nextStateDark = !isDarkActive; // Toggle operational logic state
+		const nextStateDark = !isDarkActive;
 
 		if (nextStateDark) {
 			darkTabs.add(tabId);
-			// Switch the browser address bar icon to pure stealth black
 			chrome.action.setIcon({
 				tabId: tabId,
-				path: { 32: "icon-dark.png" },
+				path: { 32: "icon-32-on.png" },
 			});
 		} else {
 			darkTabs.delete(tabId);
-			// Switch back to default medium-grey framework
 			chrome.action.setIcon({
 				tabId: tabId,
-				path: { 32: "icon-default.png" },
+				path: { 32: "icon-32-off.png" },
 			});
 		}
 
-		// Scrub out any old text tags (keeps the viewport clean and textless)
 		chrome.action.setBadgeText({ tabId: tabId, text: "" });
 
-		// Fire the hardware-accelerated smart color-space inversion script
 		chrome.scripting.executeScript({
 			target: { tabId: tabId },
 			func: () => {
@@ -49,17 +45,13 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 					const style = document.createElement("style");
 					style.id = STYLE_ID;
 					style.textContent = `
-            /* Core inverted space conversion script */
             html {
               filter: invert(0.92) hue-rotate(180deg) !important;
               background-color: #09090b !important;
             }
-            
-            /* Counter-invert visual media frameworks to preserve original production palettes */
             img, video, canvas, svg, iframe, [style*="background-image"] {
               filter: invert(1) hue-rotate(180deg) !important;
             }
-            
             html, body {
               text-rendering: optimizeLegibility !important;
               -webkit-font-smoothing: antialiased !important;
@@ -71,12 +63,10 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 		});
 	});
 
-	// Avoid memory leak loops: remove tab records from state tracking sets on tab closure
 	chrome.tabs.onRemoved.addListener((tabId) => {
 		darkTabs.delete(tabId);
 	});
 
-	// Streaming proxy for background API fetches
 	chrome.runtime.onConnect.addListener((port) => {
 		if (port.name !== "anthropic-proxy") return;
 
@@ -118,7 +108,6 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 							port.disconnect();
 							break;
 						}
-						// Decode chunk in background script for efficiency
 						port.postMessage({
 							type: "chunk",
 							value: decoder.decode(value, { stream: true }),
