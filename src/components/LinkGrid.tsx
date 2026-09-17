@@ -28,12 +28,19 @@ const sanitizeUrl = (url?: string) => {
 	return url;
 };
 
+const tileClass = (isDragging: boolean) =>
+	`flex aspect-square flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 ${
+		isDragging ? "scale-95 opacity-40" : "opacity-100"
+	}`;
+
 export default function LinkGrid({
 	links,
 	onReorder,
+	onEmptyClick,
 }: {
 	links: ShortcutLink[];
 	onReorder: (sourceIndex: number, targetIndex: number) => void;
+	onEmptyClick: (slotIndex: number) => void;
 }) {
 	const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 	const [openLinks, setOpenLinks] = useState<OpenLinksMode>("same");
@@ -103,29 +110,46 @@ export default function LinkGrid({
 		<div className="mx-auto grid w-full max-w-3xl grid-cols-4 gap-4 px-4 py-8">
 			{links.map((link, i) => {
 				const isDragging = draggedIndex === i;
+				const empty = !link.url.trim();
 				const safeUrl = sanitizeUrl(link.url);
+				const dragHandlers = {
+					draggable: true,
+					onDragStart: (e: React.DragEvent) => handleDragStart(e, i),
+					onDragOver: handleDragOver,
+					onDrop: (e: React.DragEvent) => handleDrop(e, i),
+					onDragEnd: handleDragEnd,
+				};
+
+				if (empty) {
+					return (
+						<button
+							key={link.id}
+							type="button"
+							{...dragHandlers}
+							onClick={() => onEmptyClick(link.index)}
+							className={`${tileClass(isDragging)} cursor-pointer`}
+						>
+							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 shadow-inner dark:bg-zinc-800">
+								<Plus size={24} className="text-zinc-400 dark:text-zinc-700" />
+							</div>
+							<span className="w-full truncate text-center font-medium text-xs text-zinc-700 dark:text-zinc-300">
+								{link.title || "Add Link"}
+							</span>
+						</button>
+					);
+				}
 
 				return (
 					<a
 						key={link.id}
 						href={safeUrl}
-						target={safeUrl !== "#" && openInNewTab ? "_blank" : "_self"}
+						target={openInNewTab ? "_blank" : "_self"}
 						rel={openInNewTab ? "noreferrer" : undefined}
-						draggable={true}
-						onDragStart={(e) => handleDragStart(e, i)}
-						onDragOver={handleDragOver}
-						onDrop={(e) => handleDrop(e, i)}
-						onDragEnd={handleDragEnd}
-						className={`flex aspect-square cursor-grab flex-col items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 active:cursor-grabbing dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 ${
-							isDragging ? "scale-95 opacity-40" : "opacity-100"
-						}`}
+						{...dragHandlers}
+						className={`${tileClass(isDragging)} cursor-grab active:cursor-grabbing`}
 					>
 						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 shadow-inner dark:bg-zinc-800">
-							{link.url ? (
-								<Favicon url={link.url} alt={link.title} size={24} />
-							) : (
-								<Plus size={24} className="text-zinc-400 dark:text-zinc-700" />
-							)}
+							<Favicon url={link.url} alt={link.title} size={24} />
 						</div>
 						<span className="w-full truncate text-center font-medium text-xs text-zinc-700 dark:text-zinc-300">
 							{link.title || "Add Link"}
