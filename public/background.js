@@ -3,12 +3,10 @@ const darkTabs = new Set();
 const ICON_OFF = {
 	16: "icon-off-16.png",
 	32: "icon-off-32.png",
-	48: "icon-off-48.png",
 };
 const ICON_ON = {
 	16: "icon-on-16.png",
 	32: "icon-on-32.png",
-	48: "icon-on-48.png",
 };
 
 if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
