@@ -1,10 +1,10 @@
 const darkTabs = new Set();
+const BRAND_BLUE = "#2563EB";
 
 function paintIcon(size, on) {
 	const canvas = new OffscreenCanvas(size, size);
 	const ctx = canvas.getContext("2d");
 	const bg = on ? "#F4F4F5" : "#18181B";
-	const fg = on ? "#1D4ED8" : "#22D3EE";
 	const radius = Math.max(3, Math.round(size * 0.22));
 	ctx.fillStyle = bg;
 	if (typeof ctx.roundRect === "function") {
@@ -14,7 +14,7 @@ function paintIcon(size, on) {
 	} else {
 		ctx.fillRect(0, 0, size, size);
 	}
-	ctx.strokeStyle = fg;
+	ctx.strokeStyle = BRAND_BLUE;
 	ctx.lineWidth = Math.max(3, Math.round(size * 0.16));
 	ctx.lineCap = "round";
 	const left = size * 0.28;
@@ -43,12 +43,21 @@ function iconData(on) {
 	};
 }
 
+function applyDefaultIcon() {
+	chrome.action.setIcon({ imageData: iconData(false) });
+	chrome.action.setBadgeText({ text: "" });
+}
+
 function applyTabIcon(tabId, on) {
 	chrome.action.setIcon({ tabId, imageData: iconData(on) });
 	chrome.action.setBadgeText({ tabId, text: "" });
 }
 
 if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
+	applyDefaultIcon();
+	chrome.runtime.onInstalled.addListener(applyDefaultIcon);
+	chrome.runtime.onStartup.addListener(applyDefaultIcon);
+
 	chrome.action.onClicked.addListener((tab) => {
 		if (
 			!tab.url ||
