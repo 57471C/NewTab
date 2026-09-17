@@ -1,74 +1,9 @@
-import { Globe, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { ShortcutLink } from "../lib/types";
+import Favicon from "./Favicon";
 
-const domainCache = new Map<string, string>();
-const publicDomainCache = new Map<string, boolean>();
 const sanitizedUrlCache = new Map<string, string>();
-
-const getDomain = (url: string) => {
-	if (!url) return "";
-	const cached = domainCache.get(url);
-	if (cached !== undefined) return cached;
-	try {
-		const parsedUrl = new URL(url.startsWith("http") ? url : `https://${url}`);
-		const domain = parsedUrl.hostname;
-		domainCache.set(url, domain);
-		return domain;
-	} catch {
-		domainCache.set(url, "");
-		return "";
-	}
-};
-
-const isPublicDomain = (hostname: string) => {
-	if (!hostname) return false;
-	const cached = publicDomainCache.get(hostname);
-	if (cached !== undefined) return cached;
-
-	const lowerHost = hostname.toLowerCase();
-
-	if (lowerHost === "localhost" || lowerHost.endsWith(".local")) {
-		publicDomainCache.set(hostname, false);
-		return false;
-	}
-
-	const ipv4Match = lowerHost.match(
-		/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
-	);
-	if (ipv4Match) {
-		const parts = ipv4Match.slice(1).map(Number);
-		if (
-			parts[0] === 10 ||
-			(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
-			(parts[0] === 192 && parts[1] === 168) ||
-			parts[0] === 127 ||
-			(parts[0] === 169 && parts[1] === 254)
-		) {
-			publicDomainCache.set(hostname, false);
-			return false;
-		}
-	}
-
-	if (lowerHost.includes(":")) {
-		const ipv6 = lowerHost.replace(/^\[|\]$/g, "");
-		if (
-			ipv6 === "::1" ||
-			ipv6.startsWith("fc") ||
-			ipv6.startsWith("fd") ||
-			ipv6.startsWith("fe8") ||
-			ipv6.startsWith("fe9") ||
-			ipv6.startsWith("fea") ||
-			ipv6.startsWith("feb")
-		) {
-			publicDomainCache.set(hostname, false);
-			return false;
-		}
-	}
-
-	publicDomainCache.set(hostname, true);
-	return true;
-};
 
 const sanitizeUrl = (url?: string) => {
 	if (!url) return "#";
@@ -137,12 +72,6 @@ export default function LinkGrid({
 		<div className="mx-auto grid w-full max-w-3xl grid-cols-4 gap-4 px-4 py-8">
 			{links.map((link, i) => {
 				const isDragging = draggedIndex === i;
-				const domain = getDomain(link.url || "");
-				const faviconUrl =
-					domain && isPublicDomain(domain)
-						? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
-						: "";
-
 				const safeUrl = sanitizeUrl(link.url);
 
 				return (
@@ -161,17 +90,8 @@ export default function LinkGrid({
 						}`}
 					>
 						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 shadow-inner dark:bg-zinc-800">
-							{faviconUrl ? (
-								<img
-									src={faviconUrl}
-									alt={link.title}
-									className="h-6 w-6 rounded-sm"
-									onError={(e) => {
-										(e.target as HTMLImageElement).style.display = "none";
-									}}
-								/>
-							) : link.url ? (
-								<Globe size={24} className="text-zinc-500" />
+							{link.url ? (
+								<Favicon url={link.url} alt={link.title} size={24} />
 							) : (
 								<Plus size={24} className="text-zinc-400 dark:text-zinc-700" />
 							)}
