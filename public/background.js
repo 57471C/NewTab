@@ -1,5 +1,15 @@
-// Active session tracking state per individual browser tab ID
 const darkTabs = new Set();
+
+const ICON_OFF = {
+	16: "icon-off-16.png",
+	32: "icon-off-32.png",
+	48: "icon-off-48.png",
+};
+const ICON_ON = {
+	16: "icon-on-16.png",
+	32: "icon-on-32.png",
+	48: "icon-on-48.png",
+};
 
 if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 	chrome.action.onClicked.addListener((tab) => {
@@ -14,27 +24,20 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 		}
 
 		const tabId = tab.id;
-		const isDarkActive = darkTabs.has(tabId);
-		const nextStateDark = !isDarkActive;
+		const nextStateDark = !darkTabs.has(tabId);
 
 		if (nextStateDark) {
 			darkTabs.add(tabId);
-			chrome.action.setIcon({
-				tabId: tabId,
-				path: { 32: "icon-32-on.png" },
-			});
+			chrome.action.setIcon({ tabId, path: ICON_ON });
 		} else {
 			darkTabs.delete(tabId);
-			chrome.action.setIcon({
-				tabId: tabId,
-				path: { 32: "icon-32-off.png" },
-			});
+			chrome.action.setIcon({ tabId, path: ICON_OFF });
 		}
 
-		chrome.action.setBadgeText({ tabId: tabId, text: "" });
+		chrome.action.setBadgeText({ tabId, text: "" });
 
 		chrome.scripting.executeScript({
-			target: { tabId: tabId },
+			target: { tabId },
 			func: () => {
 				const STYLE_ID = "comet-smart-dark-matrix";
 				const existingStyle = document.getElementById(STYLE_ID);
