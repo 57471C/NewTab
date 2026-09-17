@@ -1,5 +1,52 @@
-// Active session tracking state per individual browser tab ID
 const darkTabs = new Set();
+
+function paintIcon(size, on) {
+	const canvas = new OffscreenCanvas(size, size);
+	const ctx = canvas.getContext("2d");
+	const bg = on ? "#F4F4F5" : "#18181B";
+	const fg = on ? "#1D4ED8" : "#22D3EE";
+	const radius = Math.max(3, Math.round(size * 0.22));
+	ctx.fillStyle = bg;
+	if (typeof ctx.roundRect === "function") {
+		ctx.beginPath();
+		ctx.roundRect(0, 0, size, size, radius);
+		ctx.fill();
+	} else {
+		ctx.fillRect(0, 0, size, size);
+	}
+	ctx.strokeStyle = fg;
+	ctx.lineWidth = Math.max(3, Math.round(size * 0.16));
+	ctx.lineCap = "round";
+	const left = size * 0.28;
+	const right = size * 0.72;
+	const top = size * 0.22;
+	const bot = size * 0.78;
+	ctx.beginPath();
+	ctx.moveTo(left, top);
+	ctx.lineTo(left, bot);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(left, top);
+	ctx.lineTo(right, bot);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(right, top);
+	ctx.lineTo(right, bot);
+	ctx.stroke();
+	return ctx.getImageData(0, 0, size, size);
+}
+
+function iconData(on) {
+	return {
+		16: paintIcon(16, on),
+		32: paintIcon(32, on),
+	};
+}
+
+function applyTabIcon(tabId, on) {
+	chrome.action.setIcon({ tabId, imageData: iconData(on) });
+	chrome.action.setBadgeText({ tabId, text: "" });
+}
 
 if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 	chrome.action.onClicked.addListener((tab) => {
@@ -14,31 +61,15 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 		}
 
 		const tabId = tab.id;
-		const isDarkActive = darkTabs.has(tabId);
-		const nextStateDark = !isDarkActive; // Toggle operational logic state
+		const nextStateDark = !darkTabs.has(tabId);
 
-		if (nextStateDark) {
-			darkTabs.add(tabId);
-			// Switch the browser address bar icon to pure stealth black
-			chrome.action.setIcon({
-				tabId: tabId,
-				path: { 32: "icon-dark.png" },
-			});
-		} else {
-			darkTabs.delete(tabId);
-			// Switch back to default medium-grey framework
-			chrome.action.setIcon({
-				tabId: tabId,
-				path: { 32: "icon-default.png" },
-			});
-		}
+		if (nextStateDark) darkTabs.add(tabId);
+		else darkTabs.delete(tabId);
 
-		// Scrub out any old text tags (keeps the viewport clean and textless)
-		chrome.action.setBadgeText({ tabId: tabId, text: "" });
+		applyTabIcon(tabId, nextStateDark);
 
-		// Fire the hardware-accelerated smart color-space inversion script
 		chrome.scripting.executeScript({
-			target: { tabId: tabId },
+			target: { tabId },
 			func: () => {
 				const STYLE_ID = "comet-smart-dark-matrix";
 				const existingStyle = document.getElementById(STYLE_ID);
@@ -49,17 +80,13 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 					const style = document.createElement("style");
 					style.id = STYLE_ID;
 					style.textContent = `
-            /* Core inverted space conversion script */
             html {
               filter: invert(0.92) hue-rotate(180deg) !important;
               background-color: #09090b !important;
             }
-            
-            /* Counter-invert visual media frameworks to preserve original production palettes */
             img, video, canvas, svg, iframe, [style*="background-image"] {
               filter: invert(1) hue-rotate(180deg) !important;
             }
-            
             html, body {
               text-rendering: optimizeLegibility !important;
               -webkit-font-smoothing: antialiased !important;
@@ -71,12 +98,10 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 		});
 	});
 
-	// Avoid memory leak loops: remove tab records from state tracking sets on tab closure
 	chrome.tabs.onRemoved.addListener((tabId) => {
 		darkTabs.delete(tabId);
 	});
 
-	// Streaming proxy for background API fetches
 	chrome.runtime.onConnect.addListener((port) => {
 		if (port.name !== "anthropic-proxy") return;
 
@@ -118,7 +143,6 @@ if (typeof chrome !== "undefined" && chrome.action && chrome.scripting) {
 							port.disconnect();
 							break;
 						}
-						// Decode chunk in background script for efficiency
 						port.postMessage({
 							type: "chunk",
 							value: decoder.decode(value, { stream: true }),

@@ -14,3 +14,38 @@
 		}
 	}
 }
+
+* {
+	scrollbar-width: thin;
+	scrollbar-color: #a1a1aa transparent;
+}
+
+.dark * {
+	scrollbar-color: #3f3f46 transparent;
+}
+
+*::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	background: #a1a1aa;
+	border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background: #71717a;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+	background: #3f3f46;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+	background: #52525b;
+}

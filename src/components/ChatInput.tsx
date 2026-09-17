@@ -60,19 +60,26 @@ const AI_MODELS = [
 		icon: chatgptLogo,
 		invert: true,
 	},
-	{ label: "Grok 4.6", value: "grok-4.6", icon: grokLogo },
-	{ label: "Grok 4.3", value: "grok-4.3", icon: grokLogo },
+	{ label: "Grok 4.6", value: "grok-4.6", icon: grokLogo, invertLight: true },
+	{ label: "Grok 4.3", value: "grok-4.3", icon: grokLogo, invertLight: true },
 	{
 		label: "Grok 4.20 Fast",
 		value: "grok-4.20-0309-non-reasoning",
 		icon: grokLogo,
+		invertLight: true,
 	},
 	{
 		label: "Grok 4.20 Reasoning",
 		value: "grok-4.20-0309-reasoning",
 		icon: grokLogo,
+		invertLight: true,
 	},
-	{ label: "Grok Build", value: "grok-build-0.1", icon: grokLogo },
+	{
+		label: "Grok Build",
+		value: "grok-build-0.1",
+		icon: grokLogo,
+		invertLight: true,
+	},
 ];
 
 function firstReadyModel(ready: Set<ProviderId>, preferred?: string | null) {
@@ -86,10 +93,16 @@ function firstReadyModel(ready: Set<ProviderId>, preferred?: string | null) {
 	return available?.value ?? AI_MODELS[0].value;
 }
 
+function modelIconTone(model: { invert?: boolean; invertLight?: boolean }) {
+	if (model.invertLight) return "invert dark:invert-0";
+	if (model.invert) return "dark:invert";
+	return "";
+}
+
 const chipClass =
 	"flex cursor-pointer items-center gap-1 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 font-medium text-xs text-zinc-700 transition-colors hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-600";
 const menuClass =
-	"absolute bottom-full mb-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900";
+	"absolute bottom-full mb-2 rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900";
 
 export default function ChatInput({
 	onSubmit,
@@ -353,7 +366,7 @@ export default function ChatInput({
 								<span>{selectedEngine.label}</span>
 							</button>
 							{isSearchMenuOpen && (
-								<div className={`${menuClass} left-0 w-44`}>
+								<div className={`${menuClass} left-0 w-44 overflow-hidden`}>
 									{SEARCH_ENGINES.map((engine) => (
 										<button
 											key={engine.label}
@@ -387,14 +400,12 @@ export default function ChatInput({
 								<img
 									src={selectedModel.icon}
 									alt={`${selectedModel.label} logo`}
-									className={`h-[14px] w-[14px] object-contain ${
-										selectedModel.invert ? "dark:invert" : ""
-									} ${selectedReady ? "" : "opacity-40"}`}
+									className={`h-[14px] w-[14px] object-contain ${modelIconTone(selectedModel)} ${selectedReady ? "" : "opacity-40"}`}
 								/>
 								<span>{selectedModel.label}</span>
 							</button>
 							{isModelMenuOpen && (
-								<div className={`${menuClass} right-0 max-h-80 w-56 overflow-y-auto`}>
+								<div className={`${menuClass} right-0 max-h-56 w-56 overflow-y-auto`}>
 									{AI_MODELS.map((model) => {
 										const ready = readyProviders.has(
 											resolveProvider(model.value),
@@ -418,9 +429,7 @@ export default function ChatInput({
 												<img
 													src={model.icon}
 													alt={`${model.label} logo`}
-													className={`h-[14px] w-[14px] object-contain ${
-														model.invert ? "dark:invert" : ""
-													} ${ready ? "" : "opacity-30"}`}
+													className={`h-[14px] w-[14px] object-contain ${modelIconTone(model)} ${ready ? "" : "opacity-30"}`}
 												/>
 												<span className="flex-1 truncate">{model.label}</span>
 												{!ready && (

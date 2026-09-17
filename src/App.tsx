@@ -10,7 +10,7 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import reactLogo from "./assets/react.svg";
+import newtabLogo from "./assets/newtab.svg";
 import ChatFeed from "./components/ChatFeed";
 import ChatInput from "./components/ChatInput";
 import LinkGrid from "./components/LinkGrid";
@@ -30,6 +30,7 @@ function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [focusSlot, setFocusSlot] = useState<number | null>(null);
 	const [toast, setToast] = useState<{
 		type: "success" | "error";
 		message: string;
@@ -92,6 +93,16 @@ function App() {
 		setToast({ type, message });
 		if (toastTimeoutRef.current) window.clearTimeout(toastTimeoutRef.current);
 		toastTimeoutRef.current = window.setTimeout(() => setToast(null), 3000);
+	};
+
+	const openSettings = (slot: number | null = null) => {
+		setFocusSlot(slot);
+		setIsSettingsOpen(true);
+	};
+
+	const closeSettings = () => {
+		setIsSettingsOpen(false);
+		setFocusSlot(null);
 	};
 
 	const updateShortcutInDB = async (
@@ -228,7 +239,7 @@ function App() {
 					className="group relative flex h-16 w-full cursor-pointer items-center justify-center border-zinc-200 border-b outline-none transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
 				>
 					<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center">
-						<img src={reactLogo} alt="React Logo" className="h-6 w-6" />
+						<img src={newtabLogo} alt="NewTab" className="h-7 w-7" />
 					</div>
 					{!isExpanded && (
 						<div className="pointer-events-none absolute top-1/2 left-full z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 font-medium text-xs text-zinc-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
@@ -307,7 +318,7 @@ function App() {
 						icon={<Settings size={20} />}
 						label="Settings"
 						expanded={isExpanded}
-						onClick={() => setIsSettingsOpen(true)}
+						onClick={() => openSettings()}
 					/>
 				</div>
 			</aside>
@@ -323,7 +334,11 @@ function App() {
 					/>
 				) : (
 					<div className="flex-1 overflow-y-auto p-6">
-						<LinkGrid links={links} onReorder={reorderLinks} />
+						<LinkGrid
+							links={links}
+							onReorder={reorderLinks}
+							onEmptyClick={(slot) => openSettings(slot)}
+						/>
 					</div>
 				)}
 
@@ -332,10 +347,11 @@ function App() {
 
 			<SettingsModal
 				isOpen={isSettingsOpen}
-				onClose={() => setIsSettingsOpen(false)}
+				onClose={closeSettings}
 				links={links}
 				onUpdateShortcut={updateShortcutInDB}
 				showToast={showToast}
+				focusSlot={focusSlot}
 			/>
 		</div>
 	);
