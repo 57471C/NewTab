@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { type OpenLinksMode, prefs } from "../lib/prefs";
 import type { ShortcutLink } from "../lib/types";
 import { vault } from "../lib/vault";
 
@@ -11,7 +12,7 @@ const PROVIDERS = [
 ] as const;
 
 type ProviderId = (typeof PROVIDERS)[number]["id"];
-type Tab = "keys" | "shortcuts";
+type Tab = "shortcuts" | "keys";
 
 const fieldClass =
 	"rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus:border-zinc-600";
@@ -41,7 +42,8 @@ export default function SettingsModal({
 	showToast: (type: "success" | "error", message: string) => void;
 	children?: React.ReactNode;
 }) {
-	const [tab, setTab] = useState<Tab>("keys");
+	const [tab, setTab] = useState<Tab>("shortcuts");
+	const [openLinks, setOpenLinks] = useState<OpenLinksMode>("same");
 	const [drafts, setDrafts] = useState<Record<ProviderId, string>>({
 		Gemini: "",
 		Claude: "",
@@ -69,11 +71,12 @@ export default function SettingsModal({
 			}
 			setSaved(nextSaved);
 			setDrafts(nextDrafts);
+			setOpenLinks(await prefs.getOpenLinks());
 		};
 
 		void load();
 		setShortcutDrafts(links);
-		setTab("keys");
+		setTab("shortcuts");
 	}, [isOpen, links]);
 
 	useEffect(() => {
@@ -110,9 +113,20 @@ export default function SettingsModal({
 		await onUpdateShortcut(link.index, link.title, link.url);
 	};
 
+	const saveOpenLinks = async (mode: OpenLinksMode) => {
+		setOpenLinks(mode);
+		await prefs.setOpenLinks(mode);
+		showToast(
+			"success",
+			mode === "same"
+				? "Grid links will replace this tab."
+				: "Grid links will open in a new tab.",
+		);
+	};
+
 	return (
 		<div
-			className="scrollbar-custom fixed inset-0 z-50 flex h-full w-full items-center justify-center overflow-y-auto bg-black/40 text-zinc-800 dark:text-zinc-200"
+			className="fixed inset-0 z-50 flex h-full w-full items-center justify-center overflow-y-auto bg-black/40 text-zinc-800 dark:text-zinc-200"
 			onClick={onClose}
 			onKeyDown={(event) => {
 				if (event.key === "Escape") onClose();
@@ -141,63 +155,47 @@ export default function SettingsModal({
 				</p>
 
 				<div className="mt-4 flex gap-2 border-zinc-200 border-b pb-3 dark:border-zinc-800">
-					<button type="button" onClick={() => setTab("keys")} className={tabClass(tab === "keys")}>
-						API keys
-					</button>
 					<button
 						type="button"
 						onClick={() => setTab("shortcuts")}
 						className={tabClass(tab === "shortcuts")}
 					>
-						Shortcuts
+						Grid
+					</button>
+					<button type="button" onClick={() => setTab("keys")} className={tabClass(tab === "keys")}>
+						API keys
 					</button>
 				</div>
 
-				{tab === "keys" && (
-					<div className="mt-4 flex flex-col gap-4">
-						{PROVIDERS.map((provider) => (
-							<label key={provider.id} className="flex flex-col gap-1.5">
-								<span className="flex items-center justify-between text-xs">
-									<span className="font-medium text-zinc-800 dark:text-zinc-200">
-										{provider.label}
-									</span>
-									<span className="text-zinc-500">
-										{saved[provider.id] ? "Saved on this device" : "Not set"}
-									</span>
-								</span>
-								<div className="flex gap-2">
-									<input
-										type="password"
-										autoComplete="off"
-										value={drafts[provider.id]}
-										onChange={(event) =>
-											setDrafts((current) => ({
-												...current,
-												[provider.id]: event.target.value,
-											}))
-										}
-										placeholder={
-											saved[provider.id]
-												? "Enter a new key to replace, or save empty to clear"
-												: provider.hint
-										}
-										className={`flex-1 ${fieldClass}`}
-									/>
-									<button
-										type="button"
-										onClick={() => void saveKey(provider.id)}
-										className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-xs text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
-									>
-										Save
-									</button>
-								</div>
-							</label>
-						))}
-					</div>
-				)}
-
 				{tab === "shortcuts" && (
 					<div className="mt-4 flex flex-col gap-3">
+						<div className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
+							<div>
+								<p className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
+									Open grid links
+								</p>
+								<p className="text-[11px] text-zinc-500">
+									Replace this new tab, or spawn another one.
+								</p>
+							</div>
+							<div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
+								<button
+									type="button"
+									onClick={() => void saveOpenLinks("same")}
+									className={tabClass(openLinks === "same")}
+								>
+									This tab
+								</button>
+								<button
+									type="button"
+									onClick={() => void saveOpenLinks("new")}
+									className={tabClass(openLinks === "new")}
+								>
+									New tab
+								</button>
+							</div>
+						</div>
+
 						{shortcutDrafts.map((link, index) => (
 							<div
 								key={link.id}
@@ -239,6 +237,49 @@ export default function SettingsModal({
 									Save
 								</button>
 							</div>
+						))}
+					</div>
+				)}
+
+				{tab === "keys" && (
+					<div className="mt-4 flex flex-col gap-4">
+						{PROVIDERS.map((provider) => (
+							<label key={provider.id} className="flex flex-col gap-1.5">
+								<span className="flex items-center justify-between text-xs">
+									<span className="font-medium text-zinc-800 dark:text-zinc-200">
+										{provider.label}
+									</span>
+									<span className="text-zinc-500">
+										{saved[provider.id] ? "Saved on this device" : "Not set"}
+									</span>
+								</span>
+								<div className="flex gap-2">
+									<input
+										type="password"
+										autoComplete="off"
+										value={drafts[provider.id]}
+										onChange={(event) =>
+											setDrafts((current) => ({
+												...current,
+												[provider.id]: event.target.value,
+											}))
+										}
+										placeholder={
+											saved[provider.id]
+												? "Enter a new key to replace, or save empty to clear"
+												: provider.hint
+										}
+										className={`flex-1 ${fieldClass}`}
+									/>
+									<button
+										type="button"
+										onClick={() => void saveKey(provider.id)}
+										className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-xs text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+									>
+										Save
+									</button>
+								</div>
+							</label>
 						))}
 					</div>
 				)}
