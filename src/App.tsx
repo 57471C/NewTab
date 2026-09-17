@@ -30,6 +30,7 @@ function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [focusSlot, setFocusSlot] = useState<number | null>(null);
 	const [toast, setToast] = useState<{
 		type: "success" | "error";
 		message: string;
@@ -92,6 +93,16 @@ function App() {
 		setToast({ type, message });
 		if (toastTimeoutRef.current) window.clearTimeout(toastTimeoutRef.current);
 		toastTimeoutRef.current = window.setTimeout(() => setToast(null), 3000);
+	};
+
+	const openSettings = (slot: number | null = null) => {
+		setFocusSlot(slot);
+		setIsSettingsOpen(true);
+	};
+
+	const closeSettings = () => {
+		setIsSettingsOpen(false);
+		setFocusSlot(null);
 	};
 
 	const updateShortcutInDB = async (
@@ -307,7 +318,7 @@ function App() {
 						icon={<Settings size={20} />}
 						label="Settings"
 						expanded={isExpanded}
-						onClick={() => setIsSettingsOpen(true)}
+						onClick={() => openSettings()}
 					/>
 				</div>
 			</aside>
@@ -323,7 +334,11 @@ function App() {
 					/>
 				) : (
 					<div className="flex-1 overflow-y-auto p-6">
-						<LinkGrid links={links} onReorder={reorderLinks} />
+						<LinkGrid
+							links={links}
+							onReorder={reorderLinks}
+							onEmptyClick={(slot) => openSettings(slot)}
+						/>
 					</div>
 				)}
 
@@ -332,10 +347,11 @@ function App() {
 
 			<SettingsModal
 				isOpen={isSettingsOpen}
-				onClose={() => setIsSettingsOpen(false)}
+				onClose={closeSettings}
 				links={links}
 				onUpdateShortcut={updateShortcutInDB}
 				showToast={showToast}
+				focusSlot={focusSlot}
 			/>
 		</div>
 	);
