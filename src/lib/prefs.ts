@@ -3,6 +3,9 @@
 const PREF_MODEL = "prefs.aiModel";
 const PREF_ENGINE = "prefs.searchEngine";
 const PREF_THEME = "prefs.theme";
+const PREF_OPEN_LINKS = "prefs.openLinks";
+
+export type OpenLinksMode = "same" | "new";
 
 const memoryPrefs = new Map<string, string>();
 
@@ -45,4 +48,9 @@ export const prefs = {
 		return value === "light" ? "light" : "dark";
 	},
 	setTheme: (theme: "dark" | "light") => setValue(PREF_THEME, theme),
+	async getOpenLinks(): Promise<OpenLinksMode> {
+		const value = await getValue(PREF_OPEN_LINKS);
+		return value === "new" ? "new" : "same";
+	},
+	setOpenLinks: (mode: OpenLinksMode) => setValue(PREF_OPEN_LINKS, mode),
 };
