@@ -39,7 +39,7 @@ function App() {
 	const [isChatActive, setIsChatActive] = useState(false);
 	const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
-	const { streamChat, isStreaming, streamingContent, streamingChatId } =
+	const { streamChat, stopChat, isStreaming, streamingContent, streamingChatId } =
 		useStreamingChat();
 
 	const handleNewChat = () => {
@@ -342,7 +342,11 @@ function App() {
 					</div>
 				)}
 
-				<ChatInput onSubmit={handleSubmit} />
+				<ChatInput
+					onSubmit={handleSubmit}
+					isStreaming={isStreaming}
+					onStop={stopChat}
+				/>
 			</main>
 
 			<SettingsModal
