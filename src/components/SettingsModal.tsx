@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type OpenLinksMode, prefs } from "../lib/prefs";
 import type { ShortcutLink } from "../lib/types";
 import { vault } from "../lib/vault";
@@ -30,6 +30,7 @@ export default function SettingsModal({
 	links,
 	onUpdateShortcut,
 	showToast,
+	focusSlot = null,
 }: {
 	isOpen: boolean;
 	onClose: () => void;
@@ -40,6 +41,7 @@ export default function SettingsModal({
 		url: string,
 	) => Promise<void>;
 	showToast: (type: "success" | "error", message: string) => void;
+	focusSlot?: number | null;
 	children?: React.ReactNode;
 }) {
 	const [tab, setTab] = useState<Tab>("shortcuts");
@@ -57,6 +59,7 @@ export default function SettingsModal({
 		Grok: false,
 	});
 	const [shortcutDrafts, setShortcutDrafts] = useState<ShortcutLink[]>([]);
+	const focusUrlRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -78,6 +81,12 @@ export default function SettingsModal({
 		setShortcutDrafts(links);
 		setTab("shortcuts");
 	}, [isOpen, links]);
+
+	useEffect(() => {
+		if (!isOpen || focusSlot === null) return;
+		const id = window.setTimeout(() => focusUrlRef.current?.focus(), 30);
+		return () => window.clearTimeout(id);
+	}, [isOpen, focusSlot]);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -196,48 +205,56 @@ export default function SettingsModal({
 							</div>
 						</div>
 
-						{shortcutDrafts.map((link, index) => (
-							<div
-								key={link.id}
-								className="grid grid-cols-[1fr_2fr_auto] gap-2"
-							>
-								<input
-									type="text"
-									value={link.title}
-									onChange={(event) => {
-										const title = event.target.value;
-										setShortcutDrafts((current) =>
-											current.map((item, itemIndex) =>
-												itemIndex === index ? { ...item, title } : item,
-											),
-										);
-									}}
-									placeholder="Title"
-									className={fieldClass}
-								/>
-								<input
-									type="text"
-									value={link.url}
-									onChange={(event) => {
-										const url = event.target.value;
-										setShortcutDrafts((current) =>
-											current.map((item, itemIndex) =>
-												itemIndex === index ? { ...item, url } : item,
-											),
-										);
-									}}
-									placeholder="https://example.com.au"
-									className={fieldClass}
-								/>
-								<button
-									type="button"
-									onClick={() => void saveShortcut(shortcutDrafts[index])}
-									className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-xs text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+						{shortcutDrafts.map((link, index) => {
+							const focused = focusSlot === link.index;
+							return (
+								<div
+									key={link.id}
+									className={`grid grid-cols-[1fr_2fr_auto] gap-2 rounded-lg p-1 ${
+										focused
+											? "ring-2 ring-zinc-400 dark:ring-zinc-500"
+											: ""
+									}`}
 								>
-									Save
-								</button>
-							</div>
-						))}
+									<input
+										type="text"
+										value={link.title}
+										onChange={(event) => {
+											const title = event.target.value;
+											setShortcutDrafts((current) =>
+												current.map((item, itemIndex) =>
+													itemIndex === index ? { ...item, title } : item,
+												),
+											);
+										}}
+										placeholder="Title"
+										className={fieldClass}
+									/>
+									<input
+										ref={focused ? focusUrlRef : undefined}
+										type="text"
+										value={link.url}
+										onChange={(event) => {
+											const url = event.target.value;
+											setShortcutDrafts((current) =>
+												current.map((item, itemIndex) =>
+													itemIndex === index ? { ...item, url } : item,
+												),
+											);
+										}}
+										placeholder="https://example.com.au"
+										className={fieldClass}
+									/>
+									<button
+										type="button"
+										onClick={() => void saveShortcut(shortcutDrafts[index])}
+										className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-xs text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+									>
+										Save
+									</button>
+								</div>
+							);
+						})}
 					</div>
 				)}
 
