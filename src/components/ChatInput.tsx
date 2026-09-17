@@ -1,4 +1,4 @@
-import { ArrowUp, Paperclip, X } from "lucide-react";
+import { ArrowUp, Paperclip, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import bingLogo from "../assets/bing.svg";
 import chatgptLogo from "../assets/ChatGPT.svg";
@@ -106,6 +106,8 @@ const menuClass =
 
 export default function ChatInput({
 	onSubmit,
+	isStreaming = false,
+	onStop,
 }: {
 	onSubmit: (
 		query: string,
@@ -114,6 +116,8 @@ export default function ChatInput({
 		forceChat?: boolean,
 		attachments?: ChatAttachment[],
 	) => void;
+	isStreaming?: boolean;
+	onStop?: () => void;
 }) {
 	const [inputValue, setInputValue] = useState("");
 	const [searchEngine, setSearchEngine] = useState("Google");
@@ -232,6 +236,7 @@ export default function ChatInput({
 	};
 
 	const handleSubmitInternal = (forceChat = false) => {
+		if (isStreaming) return;
 		if (!inputValue.trim() && attachments.length === 0) return;
 		const query = inputValue;
 		const pending = attachments;
@@ -252,6 +257,10 @@ export default function ChatInput({
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
+			if (isStreaming) {
+				onStop?.();
+				return;
+			}
 			handleSubmitInternal(e.metaKey || e.ctrlKey);
 		}
 	};
@@ -443,10 +452,18 @@ export default function ChatInput({
 						</div>
 						<button
 							type="button"
-							onClick={() => handleSubmitInternal(false)}
+							onClick={() => {
+								if (isStreaming) onStop?.();
+								else handleSubmitInternal(false);
+							}}
+							title={isStreaming ? "Stop generating" : "Send"}
 							className="rounded-full bg-zinc-900 p-1.5 text-zinc-50 shadow-md transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
 						>
-							<ArrowUp size={16} strokeWidth={3} />
+							{isStreaming ? (
+								<Square size={14} strokeWidth={3} className="fill-current" />
+							) : (
+								<ArrowUp size={16} strokeWidth={3} />
+							)}
 						</button>
 					</div>
 				</div>
