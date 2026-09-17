@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "NewTab Assistant",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "A minimalist, local-first browser tab launcher and streaming AI companion.",
 	"permissions": ["storage", "scripting", "activeTab", "favicon"],
 	"host_permissions": ["https://api.anthropic.com/*"],
@@ -18,7 +18,6 @@
 		"default_icon": {
 			"16": "icon-off-16.png",
 			"32": "icon-off-32.png",
-			"48": "icon-off-48.png",
 			"128": "icon-off-128.png"
 		},
 		"default_title": "Toggle page dark mode"
@@ -26,7 +25,6 @@
 	"icons": {
 		"16": "icon-off-16.png",
 		"32": "icon-off-32.png",
-		"48": "icon-off-48.png",
 		"128": "icon-off-128.png"
 	},
 	"commands": {
