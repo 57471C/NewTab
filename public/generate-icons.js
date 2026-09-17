@@ -1,47 +1,33 @@
 /**
- * Helper Node Asset Script
- * Generates the static fallback extension icons.
- * Requires the 'canvas' package: npm install canvas
+ * Writes the 32px toolbar icons used by chrome.action.setIcon.
+ * icon-default.png = dark plate (page dark mode off)
+ * icon-dark.png = light plate (page dark mode on)
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createCanvas } from "canvas";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function generateIcon(backgroundColor, filename) {
-	const canvas = createCanvas(32, 32);
-	const ctx = canvas.getContext("2d");
+const ICONS = {
+	"icon-default.png":
+		"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgEAYAAAAj6qa3AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTai1zcy1kej5aNTYiPz4=",
+	"icon-dark.png":
+		"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgEAYAAAAj6qa3AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTai1zcy1kej5aNTYiPz4=",
+};
 
-	// Background square frame with rounded corners
-	ctx.fillStyle = backgroundColor;
-	ctx.beginPath();
-	const r = 6;
-	ctx.moveTo(r, 0);
-	ctx.lineTo(32 - r, 0);
-	ctx.quadraticCurveTo(32, 0, 32, r);
-	ctx.lineTo(32, 32 - r);
-	ctx.quadraticCurveTo(32, 32, 32 - r, 32);
-	ctx.lineTo(r, 32);
-	ctx.quadraticCurveTo(0, 32, 0, 32 - r);
-	ctx.lineTo(0, r);
-	ctx.quadraticCurveTo(0, 0, r, 0);
-	ctx.closePath();
-	ctx.fill();
+// Real payloads written below — placeholders replaced immediately after this object.
+const DEFAULT_PNG =
+	"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgEAYAAAAj6qa3AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAAAAAAAAPlDu38AAAAHdElNRQfqCREKKBtEESJfAAACxUlEQVRo3mNkIAAkJCQkpKVVuSC8eGkIHbEPQivLENI/MODuRQi9whNCL3z34sWLF0+f3v6JrpIRu4c5nkJ40xQgdOKvgfYSdcB8fgiddRUSID9k4QEA9fhjCO8KVHSwxjCl4O4TCK3DxIQqMU17yHichcGFwZeBgfmWB0+gNwMDF9fu3ZcvY9LsCZ2PZk9lYGA0FHORVIBphvlvmgIjNI+zQwRu/RhofxELWEvSvhRzMjCwTgs9nnAKIf7/19v7r7MYGBjfCDoIVzAwMEgxPWSSQ8h/14he6JbBwPD/3Kslz48yMEBTQLzQQHuIWMA4Xfag4iRMj8M9+CcizekwA8Of2v0+2+5gyrNpFwc0IaVvaABEbB9ojxELmBktdR2SEfx/v29bXItnYPiTvDd7yz5M9XDxZ//k/z1iYGBea8RvUcPAwBDHdod9LwMDC0SZsv5Ae4xYwHidf4PgFgT/994NIcukGBj+2u3auTEfIf5rcsetSiQ+s4jBAXNbBgZGBmFF0WkMDAyGLFNZuOEpYOiAfyevT73kguCze5SWtLQjCj0YYMutUGufiBBnZIN6HAZavzN+uzkEA+Cv4imvw2m45ZkPubn7+zAwMM2QO6u0EFP+56Xewrq5DAwMb/73/Y9nYIDWAv//D7THSAWMc+QklL4yMHDmzV288R5h9b+r19QvXMbA8Ltu5reevQwMDH8ZLjCcGsIBAAdhbAHsCgwMzI/NPtreZWBg8tOWMljEwPBf7n3Tu2QGhr/vjs/Yb83A8D/3cff9w1gCcsgHAIVgyJUBowEwGgCjATAaAKMBMBoAowEwGgCjATAaAKMBMBoAVAwA2Dj5yAPQAFjhNNAOGeAAWPh0oB0yYAEAnTT8BuHOZxtoB9EXzOdHnxuEpoQr/yD0EJgiIwvA5wYRtQB0tlQaJgELoYF2KnUBLIXrMMFmhwFguuruL/jbSwAAAABJRU5ErkJggg==";
 
-	// Overlay typography mark
-	ctx.fillStyle = "#FFFFFF";
-	ctx.font = "bold 24px Arial, sans-serif";
-	ctx.textAlign = "center";
-	ctx.textBaseline = "middle";
-	ctx.fillText("N", 16, 16);
+const LIGHT_PNG =
+	"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgEAYAAAAj6qa3AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAAAAAAAAPlDu38AAAAHdElNRQfqCREKKBtEESJfAAAC2UlEQVRo3u2Zb0gTcRjHvzv8l7tNLSRjmxpW5h9yVGi+SKMQSgl6Yw0VRFIQyyIhISkKKYIGYUIDkZgamWBIEaloRNaLKChS1HCi/ZlLK3Gm29qc7Xrxu/PIFTOUfq7u++bh+XPseT732x3cI4MP2Ww2m92+OZR4hSpidY+IjVP7up6ORnqJbTlAbOMUy7KsXD7sWlwp+/XAIRbiGWKJLZqjPdLKyBhGbNkAAeLULADgBzcTr5+PrtY7vFyNjBGbzAT8nDAk8YN/pd2iT7XgDazATdUAY9UBx3K6O8x677I91dHDin2AwZiVqT4FqHsVhwOrhBtrCJLx//FgEjA5ac+1VJ0Lfzo9Pglc87xs+PJRjEc9kZ8OfAB8vuNone8BPLXcO+6KmB9kjrIJbYB6WlEceAFgSLhwLe2BlirTees2V5v34At5bYk74QyQGxKfF57onS971j091iT6PABdB+3BlqqOg6P5Mymir7WsbwzNAY5Ubq2KaPCuF+LMCVmsrBJ4nPYhYPYu4Iydt3CHAP4ZEJfi+6dXhybvf6uf3wQAOI5eoFSV0rmuDsibSXREZIt19Wf3OzRXRb/ntTnXdhmYqLXr3QDcBR4TF71wAvxHqXVRr+Ra0S9F122zGlAqa2r6+sR4ycXOUHOFGJ/IsOvdOWKebQ4qZtL8EEBW9cYkRerv883KwU/WdmDopDXe1eqdv67PStWUA7JRjCAf4N8CHEd7sD+VSTk156oDdqLJMJTuu768YMeNyBfAJd3u9g06ABnQgPVjAIKc/d93cRVA1/a392YfAs/Tx7X2EiBSt+Z9QBiQnR1XpIwBtsRE3ArO9L7e7wEsV373DJAASAAkABIACYAEQAIgAZAASAAkABKAFQQgfCf//8QDaNlLuxHKABottBuhBoBfGjqIawyi3dDflTFs8W6QPwn9HmL/+d2g+Bbgt6UqISEQot3qyko44cmMsB3+AYcCAEuFZXyHAAAAAElFTkSuQmCC";
 
+function writeIcon(filename, b64) {
 	const outPath = path.join(__dirname, filename);
-	fs.writeFileSync(outPath, canvas.toBuffer("image/png"));
-	console.log(`Successfully generated static asset: ${outPath}`);
+	fs.writeFileSync(outPath, Buffer.from(b64, "base64"));
+	console.log(`wrote ${outPath}`);
 }
 
-generateIcon("#52525b", "icon-default.png");
-generateIcon("#000000", "icon-dark.png");
+writeIcon("icon-default.png", DEFAULT_PNG);
+writeIcon("icon-dark.png", LIGHT_PNG);

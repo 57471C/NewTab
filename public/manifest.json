@@ -14,7 +14,15 @@
 	"background": {
 		"service_worker": "background.js"
 	},
-	"action": {},
+	"action": {
+		"default_icon": {
+			"32": "icon-default.png"
+		},
+		"default_title": "Toggle page dark mode"
+	},
+	"icons": {
+		"32": "icon-default.png"
+	},
 	"commands": {
 		"_execute_action": {
 			"suggested_key": {
