@@ -92,7 +92,11 @@ class NewTabDatabase extends Dexie {
 export const db = new NewTabDatabase();
 
 async function ensureOpen() {
-	if (!db.isOpen()) {
+	if (db.isOpen()) return;
+	try {
+		await db.open();
+	} catch {
+		db.close();
 		await db.open();
 	}
 }
@@ -103,12 +107,25 @@ export async function saveShortcut(
 	url: string,
 ) {
 	await ensureOpen();
-	const existing = await db.shortcuts.where({ slotIndex }).first();
-	if (existing && existing.id !== undefined) {
-		await db.shortcuts.update(existing.id, { title, url });
-	} else {
-		await db.shortcuts.put({ slotIndex, title, url });
+	const slot = Number(slotIndex);
+	if (!Number.isInteger(slot) || slot < 0) {
+		throw new Error(`Invalid grid slot: ${slotIndex}`);
 	}
+
+	await db.transaction("rw", db.shortcuts, async () => {
+		const existing = await db.shortcuts.where("slotIndex").equals(slot).first();
+		if (existing?.id !== undefined) {
+			await db.shortcuts.update(existing.id, { title, url });
+			return;
+		}
+		try {
+			await db.shortcuts.add({ slotIndex: slot, title, url });
+		} catch {
+			const collision = await db.shortcuts.where("slotIndex").equals(slot).first();
+			if (collision?.id === undefined) throw new Error("Could not save shortcut.");
+			await db.shortcuts.update(collision.id, { title, url });
+		}
+	});
 }
 
 export async function renameSession(chatId: string, title: string) {
@@ -170,6 +187,7 @@ export async function reorderShortcuts(
 	await db.transaction("rw", db.shortcuts, async () => {
 		const all = await db.shortcuts.orderBy("slotIndex").toArray();
 		const [moved] = all.splice(sourceIndex, 1);
+		if (!moved) return;
 		all.splice(targetIndex, 0, moved);
 
 		await db.shortcuts.bulkPut(
