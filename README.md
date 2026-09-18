@@ -1,46 +1,54 @@
-# NewTab Assistant
+# NewTab
 
-A minimalist, high-performance, privacy-first Chromium browser extension designed to replace your default New Tab page. Built with a "local-first" architecture, this application functions completely client-side—eliminating external server, database networking, and connection pooler dependencies.
+Chromium MV3 new-tab extension. Local-first bookmark grid plus streaming chat against Grok, Gemini, Claude, and OpenAI. Keys live in `chrome.storage.local`. Chat history lives in Dexie / IndexedDB. Nothing of yours is sent to a backend we run.
 
-## Key Features
+## Load unpacked
 
-- **Bookmark Grid:** A clean 4x2 grid display container for pinning high-priority shortcut links.
-- **Unified Search Bar:** Regionalized web engine query box (respects parameters like `.com.au`) with an option to hot-swap target platforms (Google, Bing, DuckDuckGo, etc.).
-- **Immersive AI Chat:** A central Perplexity/Grok-inspired minimalist text field that smoothly expands fluidly to a full-screen chat interface on active input.
-- **Multi-Model Support:** Directly interface with Grok, Gemini, Claude, and local LLM runtime ports through direct client-to-API architecture.
-- **Absolute Privacy:** Sensitive variables such as personal AI keys and preferences reside strictly within the client browser sandbox using `chrome.storage.local`.
+Works in Brave / Chrome / Edge. Always load **`dist/`**, not the repo root.
 
-## Tech Stack
-
-- **Framework:** [Vite](https://vite.dev/) + [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) (Static SPA bundle export)
-- **Styling:** [Tailwind CSS v4.0](https://tailwindcss.com/) (Native utility layout)
-- **Local Database:** [Dexie.js](https://dexie.org/) (Relational wrapper wrapping browser IndexedDB storage)
-- **LLM Streaming:** [Vercel AI SDK](https://sdk.vercel.ai/docs) (Client-directed streaming execution layers)
-- **Iconography:** [Lucide React](https://lucide.dev/)
-- **Toolchain / Code Quality:** [Biome v2.4.15](https://biomejs.dev/) (Unified, blazing fast linting and formatting)
-
----
-
-## Workspace Enforcement & Architecture Rules
-
-This workspace operates under strict structural constraints. Any contributing developer or AI agent **must** respect the core guidelines declared in the root `.cursorrules` blueprint:
-
-1. **No External Backends:** Never suggest cloud-scale environments, backend instances, hosted microservices, or cloud-synced databases (such as Supabase or hosted Postgres instances).
-2. **The Machine Is The User:** There is no authentication wall, token validation server, or Row-Level Security (RLS) system. The current browser profile session implies data ownership.
-3. **Strict Linting Standards:** Biome handles code execution standards and style configurations natively. Legacy toolchains like ESLint, Prettier, or associated package rule extensions are prohibited.
-
----
-
-## Project structure
-```plaintext
-├── .cursorrules          # Codebase governance & Agent prompt restrictions
-├── biome.json            # Unified linter/formatter structural layout definitions
-├── package.json          # Dependency mappings (Private package safety configuration)
-├── vite.config.ts        # Bundle pipeline asset configuration definitions
-├── src/
-│   ├── lib/
-│   │   └── db.ts         # Dexie DB Local-First schemas (IndexedDB)
-│   ├── components/       # LinkGrid, SearchBox, and Chat UI layers
-│   ├── App.tsx           # Layout viewport mounting base
-│   └── main.tsx          # React application bootstrapping root
+```bash
+npm install
+npm run build
 ```
+
+Then `brave://extensions` (or `chrome://extensions`) → Developer mode → Load unpacked → select `dist`.
+
+After a pull:
+
+```bash
+git pull
+npm install
+npm run build
+```
+
+Reload the card. If the toolbar icon or new-tab page looks stale, Remove + Load unpacked again.
+
+### Machines
+
+| Machine | Clone |
+| --- | --- |
+| Mac | `/Users/leanstudio/src/NewTab` |
+| Windows | `C:\Scripts\new-tab` |
+
+PowerShell (Windows) does not accept `if exist`. Use `Remove-Item path -ErrorAction SilentlyContinue` if you need to delete a leftover file.
+
+If chat throws `DatabaseClosedError` after a schema bump, DevTools → Application → IndexedDB → delete `NewTabDatabase` → reload. API keys survive that; they are not in Dexie.
+
+## What it does
+
+- 8-slot grid with favicon fallbacks and same-tab / new-tab from Settings
+- Search or URL in the same box; Ctrl/Cmd+Enter forces chat
+- Streaming chat with markdown, code copy, image attach, stop
+- Hide unused models under Settings → API keys
+- Toolbar icon toggles a per-tab invert dark mode (http/https pages only)
+
+## Scripts
+
+| Script | Why |
+| --- | --- |
+| `npm run build` | `tsc` + Vite. `prebuild` writes default toolbar PNGs from `public/generate-icons.js` |
+| `npm run dev` | Vite only. The extension still needs a `dist` build to load in the browser |
+| `npm test` | Token parser tests |
+| `npm run lint` / `npm run format` | Biome |
+
+The service worker paints the live toolbar icon. The PNG prebuild is only the fallback tile shown before the worker runs.
