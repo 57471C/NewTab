@@ -5,8 +5,13 @@ const PREF_ENGINE = "prefs.searchEngine";
 const PREF_THEME = "prefs.theme";
 const PREF_OPEN_LINKS = "prefs.openLinks";
 const PREF_HIDDEN_MODELS = "prefs.hiddenModels";
+const PREF_OLLAMA_HOST = "prefs.ollamaHost";
+const PREF_OLLAMA_MODEL = "prefs.ollamaModel";
 
 export type OpenLinksMode = "same" | "new";
+
+export const DEFAULT_OLLAMA_HOST = "http://localhost:11434";
+export const DEFAULT_OLLAMA_MODEL = "llama3.2";
 
 const memoryPrefs = new Map<string, string>();
 
@@ -68,4 +73,12 @@ export const prefs = {
 	},
 	setHiddenModels: (models: string[]) =>
 		setValue(PREF_HIDDEN_MODELS, JSON.stringify(models)),
+	async getOllamaHost(): Promise<string> {
+		return (await getValue(PREF_OLLAMA_HOST)) || DEFAULT_OLLAMA_HOST;
+	},
+	setOllamaHost: (host: string) => setValue(PREF_OLLAMA_HOST, host),
+	async getOllamaModel(): Promise<string> {
+		return (await getValue(PREF_OLLAMA_MODEL)) || DEFAULT_OLLAMA_MODEL;
+	},
+	setOllamaModel: (model: string) => setValue(PREF_OLLAMA_MODEL, model),
 };
