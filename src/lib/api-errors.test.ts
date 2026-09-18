@@ -23,7 +23,7 @@ const geminiRetired = JSON.stringify({
 describe("formatApiError", () => {
 	it("maps a rejected key", () => {
 		assert.strictEqual(
-			formatApiError(401, "{"error":"invalid api key"}"),
+			formatApiError(401, JSON.stringify({ error: "invalid api key" })),
 			"That API key was rejected. Check it in Settings.",
 		);
 	});
@@ -67,7 +67,9 @@ describe("formatCaughtError", () => {
 
 	it("passes through a short thrown message", () => {
 		assert.strictEqual(
-			formatCaughtError(new Error("API key for Gemini is missing. Please configure it in settings.")),
+			formatCaughtError(
+				new Error("API key for Gemini is missing. Please configure it in settings."),
+			),
 			"API key for Gemini is missing. Please configure it in settings.",
 		);
 	});
