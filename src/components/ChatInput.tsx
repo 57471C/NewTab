@@ -3,7 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import bingLogo from "../assets/bing.svg";
 import duckduckgoLogo from "../assets/duckduckgo.svg";
 import googleLogo from "../assets/google.svg";
-import { type ProviderId, resolveProvider } from "../lib/api-providers";
+import {
+	type ProviderId,
+	isProviderReady,
+	resolveProvider,
+} from "../lib/api-providers";
 import {
 	type ChatAttachment,
 	MAX_ATTACHMENTS,
@@ -28,9 +32,13 @@ function firstReadyModel(
 	const pool = visible.length ? visible : AI_MODELS;
 	if (preferred) {
 		const match = pool.find((model) => model.value === preferred);
-		if (match && ready.has(resolveProvider(match.value))) return match.value;
+		if (match && isProviderReady(resolveProvider(match.value), ready)) {
+			return match.value;
+		}
 	}
-	const available = pool.find((model) => ready.has(resolveProvider(model.value)));
+	const available = pool.find((model) =>
+		isProviderReady(resolveProvider(model.value), ready),
+	);
 	return available?.value ?? pool[0].value;
 }
 
@@ -232,7 +240,10 @@ export default function ChatInput({
 	const selectedEngine =
 		SEARCH_ENGINES.find((engine) => engine.label === searchEngine) ||
 		SEARCH_ENGINES[0];
-	const selectedReady = readyProviders.has(resolveProvider(selectedModel.value));
+	const selectedReady = isProviderReady(
+		resolveProvider(selectedModel.value),
+		readyProviders,
+	);
 
 	return (
 		<div className="mx-auto w-full max-w-3xl px-4 pb-8">
@@ -369,8 +380,9 @@ export default function ChatInput({
 							{isModelMenuOpen && (
 								<div className={`${menuClass} right-0 max-h-56 w-56 overflow-y-auto`}>
 									{pickerModels.map((model) => {
-										const ready = readyProviders.has(
+										const ready = isProviderReady(
 											resolveProvider(model.value),
+											readyProviders,
 										);
 										return (
 											<button
