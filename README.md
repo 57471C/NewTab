@@ -26,13 +26,6 @@ npm run build
 
 Reload the card. If the toolbar icon or new-tab page looks stale, Remove + Load unpacked again.
 
-### Machines
-
-| Machine | Clone |
-| --- | --- |
-| Mac | `/Users/leanstudio/src/NewTab` |
-| Windows | `C:\Scripts\new-tab` |
-
 PowerShell does not accept `if exist`. Use `Remove-Item path -ErrorAction SilentlyContinue` if you need to delete a leftover file.
 
 If chat or grid Save throws `DatabaseClosedError` / `DataError`, DevTools → Application → IndexedDB → delete `NewTabDatabase` → reload. API keys survive that; they are not in Dexie.
