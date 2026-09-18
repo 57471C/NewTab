@@ -52,7 +52,7 @@ export default function SettingsModal({
 }) {
 	const [tab, setTab] = useState<Tab>("shortcuts");
 	const [openLinks, setOpenLinks] = useState<OpenLinksMode>("same");
-	const [hiddenModels, setHiddenModels] = useState<string[]>([]);
+	const [hiddenModels, setHiddenModels] = useState<string[]>(["ollama"]);
 	const [ollamaHost, setOllamaHost] = useState(DEFAULT_OLLAMA_HOST);
 	const [ollamaModel, setOllamaModel] = useState(DEFAULT_OLLAMA_MODEL);
 	const [drafts, setDrafts] = useState<Record<ProviderId, string>>({
@@ -137,7 +137,10 @@ export default function SettingsModal({
 		setOllamaModel(model);
 		await prefs.setOllamaHost(host);
 		await prefs.setOllamaModel(model);
-		showToast("success", "Ollama host and model saved.");
+		const nextHidden = hiddenModels.filter((item) => item !== "ollama");
+		setHiddenModels(nextHidden);
+		await prefs.setHiddenModels(nextHidden);
+		showToast("success", "Ollama saved. It is now in the model list.");
 	};
 
 	const saveShortcut = async (link: ShortcutLink) => {
@@ -334,8 +337,8 @@ export default function SettingsModal({
 								Ollama
 							</p>
 							<p className="mt-1 text-[11px] text-zinc-500">
-								No key. Talks to a local daemon. Default host is
-								localhost:11434. Model name must match `ollama list`.
+								Hidden from the picker until you save a host. No API key. Model
+								name must match `ollama list`.
 							</p>
 							<div className="mt-3 grid grid-cols-[1.4fr_1fr_auto] gap-2">
 								<input
@@ -367,8 +370,8 @@ export default function SettingsModal({
 								Models in the picker
 							</p>
 							<p className="mt-1 text-[11px] text-zinc-500">
-								Everything is shown by default. Uncheck a model to hide it from
-								the chat list.
+								Cloud models are shown by default. Ollama appears after you save
+								a local host.
 							</p>
 							<div className="mt-3 grid grid-cols-2 gap-1.5">
 								{AI_MODELS.map((model) => {
