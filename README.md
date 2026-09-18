@@ -30,6 +30,19 @@ PowerShell does not accept `if exist`. Use `Remove-Item path -ErrorAction Silent
 
 If chat or grid Save throws `DatabaseClosedError` / `DataError`, DevTools → Application → IndexedDB → delete `NewTabDatabase` → reload. API keys survive that; they are not in Dexie.
 
+## Share a build
+
+Friends do not need Node. Tag a version from `main`:
+
+```bash
+git checkout main
+git pull
+git tag v1.0.9
+git push origin v1.0.9
+```
+
+GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.9.zip` to the Release. They unzip → Load unpacked → the `NewTab` folder. They use their own API keys.
+
 ## What it does
 
 - 8-slot grid with favicon fallbacks. Empty tile opens Settings on that row.
