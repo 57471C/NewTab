@@ -40,6 +40,9 @@ export function formatApiError(status: number, body: string): string {
 
 export function formatCaughtError(error: unknown): string {
 	if (!(error instanceof Error)) return "Something went wrong. Try again.";
+	if (/Failed to fetch|NetworkError|Load failed/i.test(error.message)) {
+		return "Could not reach the model host. If this is Ollama, is it running?";
+	}
 	const match = error.message.match(/^API Error: (\d+) - ([\s\S]*)$/);
 	if (match) return formatApiError(Number(match[1]), match[2]);
 	if (error.message.length > 200 || error.message.includes("{")) {
