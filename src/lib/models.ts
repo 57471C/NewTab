@@ -2,6 +2,7 @@ import chatgptLogo from "../assets/ChatGPT.svg";
 import claudeLogo from "../assets/claude.svg";
 import geminiLogo from "../assets/gemini.svg";
 import grokLogo from "../assets/grok.svg";
+import ollamaLogo from "../assets/ollama.svg";
 
 export type ChatModel = {
 	label: string;
@@ -68,5 +69,10 @@ export const AI_MODELS: ChatModel[] = [
 		value: "grok-build-0.1",
 		icon: grokLogo,
 		invertLight: true,
+	},
+	{
+		label: "Ollama",
+		value: "ollama",
+		icon: ollamaLogo,
 	},
 ];
