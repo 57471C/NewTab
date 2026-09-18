@@ -1,5 +1,6 @@
 import type { ChatAttachment } from "./attachments";
 import { splitDataUrl } from "./attachments";
+import { DEFAULT_OLLAMA_HOST, DEFAULT_OLLAMA_MODEL } from "./prefs";
 
 export interface ChatTurn {
 	role: "user" | "assistant" | "system";
@@ -13,7 +14,12 @@ export interface ProviderConfig {
 	payload: Record<string, unknown>;
 }
 
-export type ProviderId = "Grok" | "Gemini" | "Claude" | "GPT-4";
+export type ProviderId = "Grok" | "Gemini" | "Claude" | "GPT-4" | "Ollama";
+
+export type ProviderOptions = {
+	ollamaHost?: string;
+	ollamaModel?: string;
+};
 
 const HISTORY_LIMIT = 20;
 
@@ -25,11 +31,19 @@ const GEMINI_ALIASES: Record<string, string> = {
 
 export function resolveProvider(model: string): ProviderId {
 	const id = model.toLowerCase();
+	if (id.startsWith("ollama") || model === "Ollama") return "Ollama";
 	if (id.startsWith("grok") || model === "Grok") return "Grok";
 	if (id.startsWith("gemini") || model === "Gemini") return "Gemini";
 	if (id.startsWith("claude") || model === "Claude") return "Claude";
 	if (id.startsWith("gpt") || model === "GPT-4") return "GPT-4";
 	return "Grok";
+}
+
+export function isProviderReady(
+	provider: ProviderId,
+	ready: Set<ProviderId>,
+): boolean {
+	return provider === "Ollama" || ready.has(provider);
 }
 
 function visibleTurns(messages: ChatTurn[]): ChatTurn[] {
@@ -99,6 +113,7 @@ export function getProviderConfig(
 	model: string,
 	apiKey: string,
 	messages: ChatTurn[],
+	options: ProviderOptions = {},
 ): ProviderConfig {
 	const turns = visibleTurns(messages);
 	const provider = resolveProvider(model);
@@ -109,7 +124,18 @@ export function getProviderConfig(
 	let endpoint = "";
 	let payload: Record<string, unknown> = {};
 
-	if (provider === "Grok") {
+	if (provider === "Ollama") {
+		const host = (options.ollamaHost || DEFAULT_OLLAMA_HOST).replace(/\/$/, "");
+		endpoint = `${host}/v1/chat/completions`;
+		payload = {
+			model: options.ollamaModel || DEFAULT_OLLAMA_MODEL,
+			stream: true,
+			messages: turns.map((turn) => ({
+				role: turn.role,
+				content: openAiContent(turn),
+			})),
+		};
+	} else if (provider === "Grok") {
 		endpoint = "https://api.x.ai/v1/chat/completions";
 		headers.Authorization = `Bearer ${apiKey}`;
 		payload = {
