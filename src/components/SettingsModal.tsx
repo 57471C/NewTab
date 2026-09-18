@@ -1,7 +1,12 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AI_MODELS } from "../lib/models";
-import { type OpenLinksMode, prefs } from "../lib/prefs";
+import {
+	DEFAULT_OLLAMA_HOST,
+	DEFAULT_OLLAMA_MODEL,
+	type OpenLinksMode,
+	prefs,
+} from "../lib/prefs";
 import type { ShortcutLink } from "../lib/types";
 import { vault } from "../lib/vault";
 
@@ -48,6 +53,8 @@ export default function SettingsModal({
 	const [tab, setTab] = useState<Tab>("shortcuts");
 	const [openLinks, setOpenLinks] = useState<OpenLinksMode>("same");
 	const [hiddenModels, setHiddenModels] = useState<string[]>([]);
+	const [ollamaHost, setOllamaHost] = useState(DEFAULT_OLLAMA_HOST);
+	const [ollamaModel, setOllamaModel] = useState(DEFAULT_OLLAMA_MODEL);
 	const [drafts, setDrafts] = useState<Record<ProviderId, string>>({
 		Gemini: "",
 		Claude: "",
@@ -78,6 +85,8 @@ export default function SettingsModal({
 			setDrafts(nextDrafts);
 			setOpenLinks(await prefs.getOpenLinks());
 			setHiddenModels(await prefs.getHiddenModels());
+			setOllamaHost(await prefs.getOllamaHost());
+			setOllamaModel(await prefs.getOllamaModel());
 		};
 
 		void load();
@@ -119,6 +128,16 @@ export default function SettingsModal({
 			console.error("Failed to save API key:", error);
 			showToast("error", `Failed to save ${provider} key.`);
 		}
+	};
+
+	const saveOllama = async () => {
+		const host = ollamaHost.trim() || DEFAULT_OLLAMA_HOST;
+		const model = ollamaModel.trim() || DEFAULT_OLLAMA_MODEL;
+		setOllamaHost(host);
+		setOllamaModel(model);
+		await prefs.setOllamaHost(host);
+		await prefs.setOllamaModel(model);
+		showToast("success", "Ollama host and model saved.");
 	};
 
 	const saveShortcut = async (link: ShortcutLink) => {
@@ -309,6 +328,39 @@ export default function SettingsModal({
 								</div>
 							</label>
 						))}
+
+						<div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+							<p className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
+								Ollama
+							</p>
+							<p className="mt-1 text-[11px] text-zinc-500">
+								No key. Talks to a local daemon. Default host is
+								localhost:11434. Model name must match `ollama list`.
+							</p>
+							<div className="mt-3 grid grid-cols-[1.4fr_1fr_auto] gap-2">
+								<input
+									type="text"
+									value={ollamaHost}
+									onChange={(event) => setOllamaHost(event.target.value)}
+									placeholder={DEFAULT_OLLAMA_HOST}
+									className={fieldClass}
+								/>
+								<input
+									type="text"
+									value={ollamaModel}
+									onChange={(event) => setOllamaModel(event.target.value)}
+									placeholder={DEFAULT_OLLAMA_MODEL}
+									className={fieldClass}
+								/>
+								<button
+									type="button"
+									onClick={() => void saveOllama()}
+									className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-xs text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
+								>
+									Save
+								</button>
+							</div>
+						</div>
 
 						<div className="border-zinc-200 border-t pt-4 dark:border-zinc-800">
 							<p className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
