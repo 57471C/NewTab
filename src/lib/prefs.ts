@@ -4,6 +4,7 @@ const PREF_MODEL = "prefs.aiModel";
 const PREF_ENGINE = "prefs.searchEngine";
 const PREF_THEME = "prefs.theme";
 const PREF_OPEN_LINKS = "prefs.openLinks";
+const PREF_HIDDEN_MODELS = "prefs.hiddenModels";
 
 export type OpenLinksMode = "same" | "new";
 
@@ -53,4 +54,18 @@ export const prefs = {
 		return value === "new" ? "new" : "same";
 	},
 	setOpenLinks: (mode: OpenLinksMode) => setValue(PREF_OPEN_LINKS, mode),
+	async getHiddenModels(): Promise<string[]> {
+		const value = await getValue(PREF_HIDDEN_MODELS);
+		if (!value) return [];
+		try {
+			const parsed = JSON.parse(value);
+			return Array.isArray(parsed)
+				? parsed.filter((item): item is string => typeof item === "string")
+				: [];
+		} catch {
+			return [];
+		}
+	},
+	setHiddenModels: (models: string[]) =>
+		setValue(PREF_HIDDEN_MODELS, JSON.stringify(models)),
 };
