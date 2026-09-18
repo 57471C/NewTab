@@ -111,6 +111,15 @@ export async function saveShortcut(
 	}
 }
 
+export async function renameSession(chatId: string, title: string) {
+	await ensureOpen();
+	const next = title.trim();
+	if (!next) return;
+	const session = await db.sessions.get(chatId);
+	if (!session) return;
+	await db.sessions.put({ ...session, title: next.slice(0, 80) });
+}
+
 export async function appendMessage(
 	chatId: string,
 	role: "user" | "assistant" | "system",
