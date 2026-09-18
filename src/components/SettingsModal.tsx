@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AI_MODELS } from "../lib/models";
 import { type OpenLinksMode, prefs } from "../lib/prefs";
 import type { ShortcutLink } from "../lib/types";
 import { vault } from "../lib/vault";
@@ -46,6 +47,7 @@ export default function SettingsModal({
 }) {
 	const [tab, setTab] = useState<Tab>("shortcuts");
 	const [openLinks, setOpenLinks] = useState<OpenLinksMode>("same");
+	const [hiddenModels, setHiddenModels] = useState<string[]>([]);
 	const [drafts, setDrafts] = useState<Record<ProviderId, string>>({
 		Gemini: "",
 		Claude: "",
@@ -75,6 +77,7 @@ export default function SettingsModal({
 			setSaved(nextSaved);
 			setDrafts(nextDrafts);
 			setOpenLinks(await prefs.getOpenLinks());
+			setHiddenModels(await prefs.getHiddenModels());
 		};
 
 		void load();
@@ -131,6 +134,14 @@ export default function SettingsModal({
 				? "Grid links will replace this tab."
 				: "Grid links will open in a new tab.",
 		);
+	};
+
+	const toggleModelHidden = async (value: string) => {
+		const next = hiddenModels.includes(value)
+			? hiddenModels.filter((item) => item !== value)
+			: [...hiddenModels, value];
+		setHiddenModels(next);
+		await prefs.setHiddenModels(next);
 	};
 
 	return (
@@ -259,7 +270,7 @@ export default function SettingsModal({
 				)}
 
 				{tab === "keys" && (
-					<div className="mt-4 flex flex-col gap-4">
+					<div className="mt-4 flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
 						{PROVIDERS.map((provider) => (
 							<label key={provider.id} className="flex flex-col gap-1.5">
 								<span className="flex items-center justify-between text-xs">
@@ -298,6 +309,37 @@ export default function SettingsModal({
 								</div>
 							</label>
 						))}
+
+						<div className="border-zinc-200 border-t pt-4 dark:border-zinc-800">
+							<p className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
+								Models in the picker
+							</p>
+							<p className="mt-1 text-[11px] text-zinc-500">
+								Everything is shown by default. Uncheck a model to hide it from
+								the chat list.
+							</p>
+							<div className="mt-3 grid grid-cols-2 gap-1.5">
+								{AI_MODELS.map((model) => {
+									const visible = !hiddenModels.includes(model.value);
+									return (
+										<label
+											key={model.value}
+											className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+										>
+											<input
+												type="checkbox"
+												checked={visible}
+												onChange={() => void toggleModelHidden(model.value)}
+												className="rounded border-zinc-300 text-zinc-900 dark:border-zinc-600"
+											/>
+											<span className={visible ? "" : "text-zinc-400 dark:text-zinc-600"}>
+												{model.label}
+											</span>
+										</label>
+									);
+								})}
+							</div>
+						</div>
 					</div>
 				)}
 			</div>
