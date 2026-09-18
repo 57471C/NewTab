@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { formatApiError, formatCaughtError } from "../lib/api-errors";
 import { getProviderConfig, resolveProvider } from "../lib/api-providers";
 import {
 	type ChatAttachment,
@@ -143,7 +144,7 @@ export function useStreamingChat() {
 
 				if (!response.ok) {
 					const errorTxt = await response.text();
-					throw new Error(`API Error: ${response.status} - ${errorTxt}`);
+					throw new Error(formatApiError(response.status, errorTxt));
 				}
 
 				const reader = response.body?.getReader();
@@ -176,32 +177,21 @@ export function useStreamingChat() {
 					await appendMessage(chatId, "assistant", assistantContent);
 				}
 			} else {
-				let errorMessage =
-					error instanceof Error ? error.message : "Unknown failure";
-
-				if (apiKey) {
-					errorMessage = errorMessage.replaceAll(apiKey, "[REDACTED]");
-				}
+				const errorMessage = formatCaughtError(error);
 
 				let errorLog = error;
 				if (error instanceof Error && apiKey) {
-					const sanitizedError = new Error(errorMessage);
+					const sanitizedError = new Error(
+						error.message.replaceAll(apiKey, "[REDACTED]"),
+					);
 					sanitizedError.stack = error.stack?.replaceAll(apiKey, "[REDACTED]");
 					errorLog = sanitizedError;
-				} else if (typeof error === "string" && apiKey) {
-					errorLog = error.replaceAll(apiKey, "[REDACTED]");
-				} else if (apiKey) {
-					try {
-						errorLog = JSON.parse(
-							JSON.stringify(error).replaceAll(apiKey, "[REDACTED]"),
-						);
-					} catch {
-						errorLog = String(error).replaceAll(apiKey, "[REDACTED]");
-					}
 				}
 				console.error("Chat streaming error:", errorLog);
 
-				const contentWithErr = `${assistantContent}\n\nError: ${errorMessage}`;
+				const contentWithErr = assistantContent
+					? `${assistantContent}\n\n${errorMessage}`
+					: errorMessage;
 				setStreamingContent(contentWithErr);
 
 				await appendMessage(chatId, "assistant", contentWithErr);
