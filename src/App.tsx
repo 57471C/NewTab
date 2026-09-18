@@ -4,6 +4,7 @@ import {
 	History,
 	MessageSquare,
 	Moon,
+	Pencil,
 	Plus,
 	Settings,
 	Sun,
@@ -19,7 +20,7 @@ import Toast from "./components/Toast";
 import { useChatSessions } from "./hooks/useChatSessions";
 import { useStreamingChat } from "./hooks/useStreamingChat";
 import type { ChatAttachment } from "./lib/attachments";
-import { db, reorderShortcuts, saveShortcut } from "./lib/db";
+import { db, renameSession, reorderShortcuts, saveShortcut } from "./lib/db";
 import { prefs } from "./lib/prefs";
 
 function applyTheme(dark: boolean) {
@@ -38,6 +39,8 @@ function App() {
 	const toastTimeoutRef = useRef<number | null>(null);
 	const [isChatActive, setIsChatActive] = useState(false);
 	const [activeChatId, setActiveChatId] = useState<string | null>(null);
+	const [renamingId, setRenamingId] = useState<string | null>(null);
+	const [renameDraft, setRenameDraft] = useState("");
 
 	const { streamChat, stopChat, isStreaming, streamingContent, streamingChatId } =
 		useStreamingChat();
@@ -50,6 +53,23 @@ function App() {
 	const handleSelectChat = (id: string) => {
 		setActiveChatId(id);
 		setIsChatActive(true);
+	};
+
+	const startRename = (id: string, title: string) => {
+		setRenamingId(id);
+		setRenameDraft(title);
+	};
+
+	const commitRename = async () => {
+		if (!renamingId) return;
+		const next = renameDraft.trim();
+		setRenamingId(null);
+		if (!next) return;
+		try {
+			await renameSession(renamingId, next);
+		} catch {
+			showToast("error", "Failed to rename chat.");
+		}
 	};
 
 	const handleDeleteChat = async (e: React.MouseEvent, id: string) => {
@@ -284,22 +304,58 @@ function App() {
 												: "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
 										}`}
 									>
-										<button
-											type="button"
-											onClick={() => handleSelectChat(session.id)}
-											className="flex flex-1 items-center gap-2 overflow-hidden outline-none"
-										>
-											<MessageSquare size={14} className="flex-shrink-0" />
-											<span className="truncate">{session.title}</span>
-										</button>
-										<button
-											type="button"
-											onClick={(e) => handleDeleteChat(e, session.id)}
-											className="flex-shrink-0 opacity-0 outline-none transition-opacity hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"
-											title="Delete Chat"
-										>
-											<X size={14} />
-										</button>
+										{renamingId === session.id ? (
+											<input
+												autoFocus
+												value={renameDraft}
+												onChange={(event) => setRenameDraft(event.target.value)}
+												onBlur={() => void commitRename()}
+												onKeyDown={(event) => {
+													if (event.key === "Enter") {
+														event.preventDefault();
+														void commitRename();
+													}
+													if (event.key === "Escape") {
+														setRenamingId(null);
+													}
+												}}
+												className="w-full rounded border border-zinc-300 bg-white px-1 py-0.5 text-xs text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+											/>
+										) : (
+											<>
+												<button
+													type="button"
+													onClick={() => handleSelectChat(session.id)}
+													onDoubleClick={(event) => {
+														event.preventDefault();
+														startRename(session.id, session.title);
+													}}
+													className="flex flex-1 items-center gap-2 overflow-hidden outline-none"
+												>
+													<MessageSquare size={14} className="flex-shrink-0" />
+													<span className="truncate">{session.title}</span>
+												</button>
+												<button
+													type="button"
+													onClick={(event) => {
+														event.stopPropagation();
+														startRename(session.id, session.title);
+													}}
+													className="flex-shrink-0 opacity-0 outline-none transition-opacity hover:text-zinc-900 group-hover:opacity-100 dark:hover:text-zinc-100"
+													title="Rename chat"
+												>
+													<Pencil size={12} />
+												</button>
+												<button
+													type="button"
+													onClick={(e) => handleDeleteChat(e, session.id)}
+													className="flex-shrink-0 opacity-0 outline-none transition-opacity hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"
+													title="Delete Chat"
+												>
+													<X size={14} />
+												</button>
+											</>
+										)}
 									</div>
 								))}
 							</div>
