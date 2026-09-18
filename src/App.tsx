@@ -27,6 +27,23 @@ function applyTheme(dark: boolean) {
 	document.documentElement.classList.toggle("dark", dark);
 }
 
+function typingInField(target: EventTarget | null) {
+	if (!(target instanceof HTMLElement)) return false;
+	const tag = target.tagName;
+	return (
+		tag === "INPUT" ||
+		tag === "TEXTAREA" ||
+		tag === "SELECT" ||
+		target.isContentEditable
+	);
+}
+
+function hrefFor(url: string) {
+	const trimmed = url.trim();
+	if (!trimmed) return null;
+	return trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+}
+
 function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [isDarkMode, setIsDarkMode] = useState(true);
@@ -108,6 +125,9 @@ function App() {
 					index: i,
 				}));
 	}, [rawLinks]);
+
+	const linksRef = useRef(links);
+	linksRef.current = links;
 
 	const showToast = (type: "success" | "error", message: string) => {
 		setToast({ type, message });
@@ -236,6 +256,38 @@ function App() {
 	useEffect(() => {
 		applyTheme(isDarkMode);
 	}, [isDarkMode]);
+
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (event.metaKey || event.ctrlKey || event.altKey) return;
+			if (!/^[1-8]$/.test(event.key)) return;
+			if (typingInField(event.target)) return;
+			if (isSettingsOpen) return;
+
+			const slot = Number(event.key) - 1;
+			const link =
+				linksRef.current.find((item) => item.index === slot) ??
+				linksRef.current[slot];
+			if (!link) return;
+
+			event.preventDefault();
+			const href = hrefFor(link.url);
+			if (!href) {
+				setIsChatActive(false);
+				setActiveChatId(null);
+				openSettings(link.index);
+				return;
+			}
+
+			void prefs.getOpenLinks().then((mode) => {
+				if (mode === "new") window.open(href, "_blank", "noopener");
+				else window.location.href = href;
+			});
+		};
+
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [isSettingsOpen]);
 
 	const toggleTheme = () => {
 		const next = !isDarkMode;
