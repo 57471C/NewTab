@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "NewTab Assistant",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"description": "A minimalist, local-first browser tab launcher and streaming AI companion.",
 	"permissions": ["storage", "scripting", "activeTab", "favicon"],
 	"host_permissions": ["https://api.anthropic.com/*"],

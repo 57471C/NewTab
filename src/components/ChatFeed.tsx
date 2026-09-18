@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { memo, useEffect, useRef, useState } from "react";
 import { type ChatMessage, db } from "../lib/db";
+import Markdown from "./Markdown";
 
 interface ChatFeedProps {
 	activeChatId: string;
@@ -8,51 +9,7 @@ interface ChatFeedProps {
 	streamingContent?: string;
 }
 
-function MessageFormatter({ content }: { content: string }) {
-	const blocks = content.split(/(```[\s\S]*?```)/g);
-
-	return (
-		<div className="text-sm text-zinc-800 leading-relaxed dark:text-zinc-200">
-			{blocks.map((block, i) => {
-				if (block.startsWith("```") && block.endsWith("```")) {
-					const match = block.match(/^```(\w*)\n?([\s\S]*?)```$/);
-					const code = match ? match[2] : block.slice(3, -3);
-					return (
-						<div
-							key={`code-${i}`}
-							className="my-3 select-all overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-100 p-4 font-mono text-xs text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
-						>
-							<pre>
-								<code>{code}</code>
-							</pre>
-						</div>
-					);
-				}
-
-				const inlineParts = block.split(/(\*\*[\s\S]*?\*\*)/g);
-				return (
-					<span key={`text-${i}`} className="whitespace-pre-wrap">
-						{inlineParts.map((ip, j) => {
-							if (ip.startsWith("**") && ip.endsWith("**")) {
-								return (
-									<strong
-										key={`bold-${j}`}
-										className="font-semibold text-zinc-950 dark:text-zinc-50"
-									>
-										{ip.slice(2, -2)}
-									</strong>
-								);
-							}
-							return ip;
-						})}
-					</span>
-				);
-			})}
-		</div>
-	);
-}
-
-const MemoizedMessageFormatter = memo(MessageFormatter);
+const MemoizedMarkdown = memo(Markdown);
 
 export default function ChatFeed({
 	activeChatId,
@@ -114,7 +71,7 @@ export default function ChatFeed({
 							</div>
 						) : (
 							<div className="w-full bg-transparent py-4 text-sm">
-								<MemoizedMessageFormatter content={msg.content} />
+								<MemoizedMarkdown content={msg.content} />
 							</div>
 						)}
 					</div>
@@ -122,7 +79,7 @@ export default function ChatFeed({
 				{isStreaming && streamingContent && (
 					<div className="flex w-full justify-start">
 						<div className="w-full bg-transparent py-4 text-sm">
-							<MemoizedMessageFormatter content={streamingContent} />
+							<MemoizedMarkdown content={streamingContent} />
 						</div>
 					</div>
 				)}

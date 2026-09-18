@@ -17,6 +17,12 @@ export type ProviderId = "Grok" | "Gemini" | "Claude" | "GPT-4";
 
 const HISTORY_LIMIT = 20;
 
+const GEMINI_ALIASES: Record<string, string> = {
+	"gemini-2.5-pro": "gemini-3.1-pro-preview",
+	"gemini-2.5-flash": "gemini-3.5-flash",
+	Gemini: "gemini-3.8-flash",
+};
+
 export function resolveProvider(model: string): ProviderId {
 	const id = model.toLowerCase();
 	if (id.startsWith("grok") || model === "Grok") return "Grok";
@@ -139,7 +145,7 @@ export function getProviderConfig(
 			})),
 		};
 	} else if (provider === "Gemini") {
-		const geminiModel = model === "Gemini" ? "gemini-3.8-flash" : model;
+		const geminiModel = GEMINI_ALIASES[model] ?? model;
 		endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse`;
 		headers["x-goog-api-key"] = apiKey;
 		payload = {

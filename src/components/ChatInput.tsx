@@ -1,18 +1,15 @@
-import { ArrowUp, Paperclip, X } from "lucide-react";
+import { ArrowUp, Paperclip, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import bingLogo from "../assets/bing.svg";
-import chatgptLogo from "../assets/ChatGPT.svg";
-import claudeLogo from "../assets/claude.svg";
 import duckduckgoLogo from "../assets/duckduckgo.svg";
-import geminiLogo from "../assets/gemini.svg";
 import googleLogo from "../assets/google.svg";
-import grokLogo from "../assets/grok.svg";
 import { type ProviderId, resolveProvider } from "../lib/api-providers";
 import {
 	type ChatAttachment,
 	MAX_ATTACHMENTS,
 	readImageFile,
 } from "../lib/attachments";
+import { AI_MODELS } from "../lib/models";
 import { prefs } from "../lib/prefs";
 import { PROVIDER_IDS, vault } from "../lib/vault";
 
@@ -22,75 +19,19 @@ const SEARCH_ENGINES = [
 	{ label: "Bing", icon: bingLogo },
 ] as const;
 
-const AI_MODELS = [
-	{
-		label: "Gemini 3.8 Flash",
-		value: "gemini-3.8-flash",
-		icon: geminiLogo,
-	},
-	{
-		label: "Gemini 3.5 Flash",
-		value: "gemini-3.5-flash",
-		icon: geminiLogo,
-	},
-	{
-		label: "Gemini 2.5 Pro",
-		value: "gemini-2.5-pro",
-		icon: geminiLogo,
-	},
-	{
-		label: "Claude Sonnet 5",
-		value: "claude-sonnet-5",
-		icon: claudeLogo,
-	},
-	{
-		label: "Claude Haiku 4.5",
-		value: "claude-haiku-4-5",
-		icon: claudeLogo,
-	},
-	{
-		label: "GPT-5.5",
-		value: "gpt-5.5",
-		icon: chatgptLogo,
-		invert: true,
-	},
-	{
-		label: "GPT-4o",
-		value: "gpt-4o",
-		icon: chatgptLogo,
-		invert: true,
-	},
-	{ label: "Grok 4.6", value: "grok-4.6", icon: grokLogo, invertLight: true },
-	{ label: "Grok 4.3", value: "grok-4.3", icon: grokLogo, invertLight: true },
-	{
-		label: "Grok 4.20 Fast",
-		value: "grok-4.20-0309-non-reasoning",
-		icon: grokLogo,
-		invertLight: true,
-	},
-	{
-		label: "Grok 4.20 Reasoning",
-		value: "grok-4.20-0309-reasoning",
-		icon: grokLogo,
-		invertLight: true,
-	},
-	{
-		label: "Grok Build",
-		value: "grok-build-0.1",
-		icon: grokLogo,
-		invertLight: true,
-	},
-];
-
-function firstReadyModel(ready: Set<ProviderId>, preferred?: string | null) {
+function firstReadyModel(
+	ready: Set<ProviderId>,
+	hidden: string[],
+	preferred?: string | null,
+) {
+	const visible = AI_MODELS.filter((model) => !hidden.includes(model.value));
+	const pool = visible.length ? visible : AI_MODELS;
 	if (preferred) {
-		const match = AI_MODELS.find((model) => model.value === preferred);
+		const match = pool.find((model) => model.value === preferred);
 		if (match && ready.has(resolveProvider(match.value))) return match.value;
 	}
-	const available = AI_MODELS.find((model) =>
-		ready.has(resolveProvider(model.value)),
-	);
-	return available?.value ?? AI_MODELS[0].value;
+	const available = pool.find((model) => ready.has(resolveProvider(model.value)));
+	return available?.value ?? pool[0].value;
 }
 
 function modelIconTone(model: { invert?: boolean; invertLight?: boolean }) {
@@ -106,6 +47,8 @@ const menuClass =
 
 export default function ChatInput({
 	onSubmit,
+	isStreaming = false,
+	onStop,
 }: {
 	onSubmit: (
 		query: string,
@@ -114,6 +57,8 @@ export default function ChatInput({
 		forceChat?: boolean,
 		attachments?: ChatAttachment[],
 	) => void;
+	isStreaming?: boolean;
+	onStop?: () => void;
 }) {
 	const [inputValue, setInputValue] = useState("");
 	const [searchEngine, setSearchEngine] = useState("Google");
@@ -123,6 +68,7 @@ export default function ChatInput({
 	const [readyProviders, setReadyProviders] = useState<Set<ProviderId>>(
 		new Set(),
 	);
+	const [hiddenModels, setHiddenModels] = useState<string[]>([]);
 	const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
 	const [attachError, setAttachError] = useState<string | null>(null);
 	const chassisRef = useRef<HTMLDivElement>(null);
@@ -146,15 +92,17 @@ export default function ChatInput({
 		let cancelled = false;
 
 		const hydrate = async () => {
-			const [savedModel, savedEngine, configured] = await Promise.all([
+			const [savedModel, savedEngine, configured, hidden] = await Promise.all([
 				prefs.getModel(),
 				prefs.getEngine(),
 				vault.configured(),
+				prefs.getHiddenModels(),
 			]);
 			if (cancelled) return;
 			setReadyProviders(configured);
+			setHiddenModels(hidden);
 			if (savedEngine) setSearchEngine(savedEngine);
-			setAiModel(firstReadyModel(configured, savedModel));
+			setAiModel(firstReadyModel(configured, hidden, savedModel));
 		};
 
 		void hydrate();
@@ -174,7 +122,7 @@ export default function ChatInput({
 				void vault.configured().then((configured) => {
 					if (cancelled) return;
 					setReadyProviders(configured);
-					setAiModel((current) => firstReadyModel(configured, current));
+					setAiModel((current) => firstReadyModel(configured, hiddenModels, current));
 				});
 			}
 			if (changes["prefs.aiModel"]?.newValue) {
@@ -182,6 +130,13 @@ export default function ChatInput({
 			}
 			if (changes["prefs.searchEngine"]?.newValue) {
 				setSearchEngine(String(changes["prefs.searchEngine"].newValue));
+			}
+			if (changes["prefs.hiddenModels"]) {
+				void prefs.getHiddenModels().then((hidden) => {
+					if (cancelled) return;
+					setHiddenModels(hidden);
+					setAiModel((current) => firstReadyModel(readyProviders, hidden, current));
+				});
 			}
 		};
 
@@ -232,6 +187,7 @@ export default function ChatInput({
 	};
 
 	const handleSubmitInternal = (forceChat = false) => {
+		if (isStreaming) return;
 		if (!inputValue.trim() && attachments.length === 0) return;
 		const query = inputValue;
 		const pending = attachments;
@@ -252,6 +208,10 @@ export default function ChatInput({
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
+			if (isStreaming) {
+				onStop?.();
+				return;
+			}
 			handleSubmitInternal(e.metaKey || e.ctrlKey);
 		}
 	};
@@ -265,8 +225,10 @@ export default function ChatInput({
 		void addFiles(files);
 	};
 
+	const visibleModels = AI_MODELS.filter((model) => !hiddenModels.includes(model.value));
+	const pickerModels = visibleModels.length ? visibleModels : AI_MODELS;
 	const selectedModel =
-		AI_MODELS.find((m) => m.value === aiModel) || AI_MODELS[0];
+		pickerModels.find((m) => m.value === aiModel) || pickerModels[0];
 	const selectedEngine =
 		SEARCH_ENGINES.find((engine) => engine.label === searchEngine) ||
 		SEARCH_ENGINES[0];
@@ -372,7 +334,7 @@ export default function ChatInput({
 											key={engine.label}
 											type="button"
 											onClick={() => selectEngine(engine.label)}
-											className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+											className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
 										>
 											<img
 												src={engine.icon}
@@ -406,7 +368,7 @@ export default function ChatInput({
 							</button>
 							{isModelMenuOpen && (
 								<div className={`${menuClass} right-0 max-h-56 w-56 overflow-y-auto`}>
-									{AI_MODELS.map((model) => {
+									{pickerModels.map((model) => {
 										const ready = readyProviders.has(
 											resolveProvider(model.value),
 										);
@@ -422,8 +384,8 @@ export default function ChatInput({
 												}}
 												className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
 													ready
-														? "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-														: "cursor-not-allowed text-zinc-400 dark:text-zinc-600"
+														? "cursor-pointer text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+														: "cursor-default text-zinc-400 dark:text-zinc-600"
 												}`}
 											>
 												<img
@@ -443,10 +405,18 @@ export default function ChatInput({
 						</div>
 						<button
 							type="button"
-							onClick={() => handleSubmitInternal(false)}
+							onClick={() => {
+								if (isStreaming) onStop?.();
+								else handleSubmitInternal(false);
+							}}
+							title={isStreaming ? "Stop generating" : "Send"}
 							className="rounded-full bg-zinc-900 p-1.5 text-zinc-50 shadow-md transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white"
 						>
-							<ArrowUp size={16} strokeWidth={3} />
+							{isStreaming ? (
+								<Square size={14} strokeWidth={3} className="fill-current" />
+							) : (
+								<ArrowUp size={16} strokeWidth={3} />
+							)}
 						</button>
 					</div>
 				</div>

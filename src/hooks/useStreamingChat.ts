@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getProviderConfig, resolveProvider } from "../lib/api-providers";
 import {
 	type ChatAttachment,
@@ -8,10 +8,24 @@ import { appendMessage, db } from "../lib/db";
 import { extractTokenFromChunk } from "../lib/streaming";
 import { vault } from "../lib/vault";
 
+function isAbortError(error: unknown) {
+	return (
+		(error instanceof DOMException && error.name === "AbortError") ||
+		(error instanceof Error && error.name === "AbortError")
+	);
+}
+
 export function useStreamingChat() {
 	const [isStreaming, setIsStreaming] = useState(false);
 	const [streamingContent, setStreamingContent] = useState("");
 	const [streamingChatId, setStreamingChatId] = useState<string | null>(null);
+	const abortRef = useRef<AbortController | null>(null);
+	const portRef = useRef<chrome.runtime.Port | null>(null);
+
+	const stopChat = () => {
+		abortRef.current?.abort();
+		portRef.current?.disconnect();
+	};
 
 	const streamChat = async (
 		prompt: string,
@@ -19,11 +33,16 @@ export function useStreamingChat() {
 		chatId = "default",
 		attachments: ChatAttachment[] = [],
 	) => {
+		abortRef.current?.abort();
+		const controller = new AbortController();
+		abortRef.current = controller;
+
 		setIsStreaming(true);
 		setStreamingContent("");
 		setStreamingChatId(chatId);
 		let apiKey: string | null = null;
 		let assistantContent = "";
+		let aborted = false;
 		try {
 			const provider = resolveProvider(model);
 			apiKey = await vault.get(provider);
@@ -80,12 +99,24 @@ export function useStreamingChat() {
 			if (provider === "Claude" && typeof chrome !== "undefined" && chrome.runtime) {
 				await new Promise<void>((resolve, reject) => {
 					const port = chrome.runtime.connect({ name: "anthropic-proxy" });
+					portRef.current = port;
 					port.postMessage({
 						action: "stream",
 						endpoint,
 						headers,
 						body: JSON.stringify(payload),
 					});
+
+					const onAbort = () => {
+						aborted = true;
+						port.disconnect();
+						resolve();
+					};
+					if (controller.signal.aborted) {
+						onAbort();
+						return;
+					}
+					controller.signal.addEventListener("abort", onAbort, { once: true });
 
 					port.onMessage.addListener(async (msg) => {
 						if (msg.type === "error") {
@@ -94,7 +125,6 @@ export function useStreamingChat() {
 						} else if (msg.type === "chunk") {
 							processChunk(msg.value);
 						} else if (msg.type === "done") {
-							await appendMessage(chatId, "assistant", assistantContent);
 							resolve();
 						}
 					});
@@ -108,6 +138,7 @@ export function useStreamingChat() {
 					method: "POST",
 					headers,
 					body: JSON.stringify(payload),
+					signal: controller.signal,
 				});
 
 				if (!response.ok) {
@@ -118,51 +149,71 @@ export function useStreamingChat() {
 				const reader = response.body?.getReader();
 				if (!reader) throw new Error("No response body");
 
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-					const chunk = decoder.decode(value, { stream: true });
-					processChunk(chunk);
+				try {
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						const chunk = decoder.decode(value, { stream: true });
+						processChunk(chunk);
+					}
+				} catch (error) {
+					if (isAbortError(error) || controller.signal.aborted) {
+						aborted = true;
+					} else {
+						throw error;
+					}
 				}
+			}
 
+			if (assistantContent) {
 				await appendMessage(chatId, "assistant", assistantContent);
+			} else if (aborted || controller.signal.aborted) {
+				await appendMessage(chatId, "assistant", "(stopped)");
 			}
 		} catch (error: unknown) {
-			let errorMessage =
-				error instanceof Error ? error.message : "Unknown failure";
-
-			if (apiKey) {
-				errorMessage = errorMessage.replaceAll(apiKey, "[REDACTED]");
-			}
-
-			let errorLog = error;
-			if (error instanceof Error && apiKey) {
-				const sanitizedError = new Error(errorMessage);
-				sanitizedError.stack = error.stack?.replaceAll(apiKey, "[REDACTED]");
-				errorLog = sanitizedError;
-			} else if (typeof error === "string" && apiKey) {
-				errorLog = error.replaceAll(apiKey, "[REDACTED]");
-			} else if (apiKey) {
-				try {
-					errorLog = JSON.parse(
-						JSON.stringify(error).replaceAll(apiKey, "[REDACTED]"),
-					);
-				} catch {
-					errorLog = String(error).replaceAll(apiKey, "[REDACTED]");
+			if (isAbortError(error) || controller.signal.aborted) {
+				if (assistantContent) {
+					await appendMessage(chatId, "assistant", assistantContent);
 				}
+			} else {
+				let errorMessage =
+					error instanceof Error ? error.message : "Unknown failure";
+
+				if (apiKey) {
+					errorMessage = errorMessage.replaceAll(apiKey, "[REDACTED]");
+				}
+
+				let errorLog = error;
+				if (error instanceof Error && apiKey) {
+					const sanitizedError = new Error(errorMessage);
+					sanitizedError.stack = error.stack?.replaceAll(apiKey, "[REDACTED]");
+					errorLog = sanitizedError;
+				} else if (typeof error === "string" && apiKey) {
+					errorLog = error.replaceAll(apiKey, "[REDACTED]");
+				} else if (apiKey) {
+					try {
+						errorLog = JSON.parse(
+							JSON.stringify(error).replaceAll(apiKey, "[REDACTED]"),
+						);
+					} catch {
+						errorLog = String(error).replaceAll(apiKey, "[REDACTED]");
+					}
+				}
+				console.error("Chat streaming error:", errorLog);
+
+				const contentWithErr = `${assistantContent}\n\nError: ${errorMessage}`;
+				setStreamingContent(contentWithErr);
+
+				await appendMessage(chatId, "assistant", contentWithErr);
 			}
-			console.error("Chat streaming error:", errorLog);
-
-			const contentWithErr = `${assistantContent}\n\nError: ${errorMessage}`;
-			setStreamingContent(contentWithErr);
-
-			await appendMessage(chatId, "assistant", contentWithErr);
 		} finally {
+			portRef.current = null;
+			if (abortRef.current === controller) abortRef.current = null;
 			setIsStreaming(false);
 			setStreamingChatId(null);
 			setStreamingContent("");
 		}
 	};
 
-	return { streamChat, isStreaming, streamingContent, streamingChatId };
+	return { streamChat, stopChat, isStreaming, streamingContent, streamingChatId };
 }
