@@ -12,6 +12,7 @@ export type OpenLinksMode = "same" | "new";
 
 export const DEFAULT_OLLAMA_HOST = "http://localhost:11434";
 export const DEFAULT_OLLAMA_MODEL = "llama3.2";
+const OLLAMA_MODEL_VALUE = "ollama";
 
 const memoryPrefs = new Map<string, string>();
 
@@ -44,6 +45,18 @@ async function setValue(key: string, value: string): Promise<void> {
 	memoryPrefs.set(key, value);
 }
 
+function parseHidden(value: string | null): string[] {
+	if (!value) return [];
+	try {
+		const parsed = JSON.parse(value);
+		return Array.isArray(parsed)
+			? parsed.filter((item): item is string => typeof item === "string")
+			: [];
+	} catch {
+		return [];
+	}
+}
+
 export const prefs = {
 	getModel: () => getValue(PREF_MODEL),
 	setModel: (model: string) => setValue(PREF_MODEL, model),
@@ -60,16 +73,12 @@ export const prefs = {
 	},
 	setOpenLinks: (mode: OpenLinksMode) => setValue(PREF_OPEN_LINKS, mode),
 	async getHiddenModels(): Promise<string[]> {
-		const value = await getValue(PREF_HIDDEN_MODELS);
-		if (!value) return [];
-		try {
-			const parsed = JSON.parse(value);
-			return Array.isArray(parsed)
-				? parsed.filter((item): item is string => typeof item === "string")
-				: [];
-		} catch {
-			return [];
+		const stored = parseHidden(await getValue(PREF_HIDDEN_MODELS));
+		const ollamaConfigured = Boolean(await getValue(PREF_OLLAMA_HOST));
+		if (!ollamaConfigured && !stored.includes(OLLAMA_MODEL_VALUE)) {
+			return [...stored, OLLAMA_MODEL_VALUE];
 		}
+		return stored;
 	},
 	setHiddenModels: (models: string[]) =>
 		setValue(PREF_HIDDEN_MODELS, JSON.stringify(models)),
