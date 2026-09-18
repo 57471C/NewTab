@@ -112,7 +112,7 @@ describe("extractTokenFromChunk", () => {
 		assert.strictEqual(token, "");
 	});
 
-	it("should return empty string for unknown model", () => {
+	it("should treat unknown slugs as Grok-shaped chunks", () => {
 		const model = "UnknownModel";
 		const data = {
 			choices: [
@@ -124,6 +124,6 @@ describe("extractTokenFromChunk", () => {
 			],
 		};
 		const token = extractTokenFromChunk(model, data);
-		assert.strictEqual(token, "");
+		assert.strictEqual(token, "data");
 	});
 });
