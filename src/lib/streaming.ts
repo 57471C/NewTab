@@ -5,7 +5,7 @@ export function extractTokenFromChunk(model: string, data: any): string {
 	const provider = resolveProvider(model);
 	let token = "";
 
-	if (provider === "Grok" || provider === "GPT-4") {
+	if (provider === "Grok" || provider === "GPT-4" || provider === "Ollama") {
 		token = data.choices?.[0]?.delta?.content || "";
 	} else if (provider === "Claude") {
 		if (data.type === "content_block_delta") {
