@@ -6,6 +6,7 @@ import {
 	attachmentNote,
 } from "../lib/attachments";
 import { appendMessage, db } from "../lib/db";
+import { prefs } from "../lib/prefs";
 import { extractTokenFromChunk } from "../lib/streaming";
 import { vault } from "../lib/vault";
 
@@ -46,11 +47,15 @@ export function useStreamingChat() {
 		let aborted = false;
 		try {
 			const provider = resolveProvider(model);
-			apiKey = await vault.get(provider);
-			if (!apiKey) {
-				throw new Error(
-					`API key for ${provider} is missing. Please configure it in settings.`,
-				);
+			if (provider !== "Ollama") {
+				apiKey = await vault.get(provider);
+				if (!apiKey) {
+					throw new Error(
+						`API key for ${provider} is missing. Please configure it in settings.`,
+					);
+				}
+			} else {
+				apiKey = "";
 			}
 
 			const prior = await db.messages
@@ -61,13 +66,23 @@ export function useStreamingChat() {
 			const storedPrompt = `${prompt}${attachmentNote(attachments)}`.trim();
 			await appendMessage(chatId, "user", storedPrompt);
 
-			const { endpoint, headers, payload } = getProviderConfig(model, apiKey, [
-				...prior.map((message) => ({
-					role: message.role,
-					content: message.content,
-				})),
-				{ role: "user", content: prompt, attachments },
+			const [ollamaHost, ollamaModel] = await Promise.all([
+				prefs.getOllamaHost(),
+				prefs.getOllamaModel(),
 			]);
+
+			const { endpoint, headers, payload } = getProviderConfig(
+				model,
+				apiKey,
+				[
+					...prior.map((message) => ({
+						role: message.role,
+						content: message.content,
+					})),
+					{ role: "user", content: prompt, attachments },
+				],
+				{ ollamaHost, ollamaModel },
+			);
 
 			const decoder = new TextDecoder("utf-8");
 			let streamBuffer = "";
