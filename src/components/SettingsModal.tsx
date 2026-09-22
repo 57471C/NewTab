@@ -52,6 +52,7 @@ export default function SettingsModal({
 }) {
 	const [tab, setTab] = useState<Tab>("shortcuts");
 	const [openLinks, setOpenLinks] = useState<OpenLinksMode>("same");
+	const [focusBox, setFocusBox] = useState(true);
 	const [hiddenModels, setHiddenModels] = useState<string[]>(["ollama"]);
 	const [ollamaHost, setOllamaHost] = useState(DEFAULT_OLLAMA_HOST);
 	const [ollamaModel, setOllamaModel] = useState(DEFAULT_OLLAMA_MODEL);
@@ -84,6 +85,7 @@ export default function SettingsModal({
 			setSaved(nextSaved);
 			setDrafts(nextDrafts);
 			setOpenLinks(await prefs.getOpenLinks());
+			setFocusBox(await prefs.getFocusBox());
 			setHiddenModels(await prefs.getHiddenModels());
 			setOllamaHost(await prefs.getOllamaHost());
 			setOllamaModel(await prefs.getOllamaModel());
@@ -155,6 +157,17 @@ export default function SettingsModal({
 			mode === "same"
 				? "Grid links will replace this tab."
 				: "Grid links will open in a new tab.",
+		);
+	};
+
+	const saveFocusBox = async (on: boolean) => {
+		setFocusBox(on);
+		await prefs.setFocusBox(on);
+		showToast(
+			"success",
+			on
+				? "New tabs will focus the chat box. Esc blurs it for 1-8."
+				: "New tabs will not steal focus.",
 		);
 	};
 
@@ -234,6 +247,33 @@ export default function SettingsModal({
 									className={tabClass(openLinks === "new")}
 								>
 									New tab
+								</button>
+							</div>
+						</div>
+
+						<div className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
+							<div>
+								<p className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
+									Focus chat box
+								</p>
+								<p className="text-[11px] text-zinc-500">
+									On every new tab. Esc blurs so keys 1-8 still work.
+								</p>
+							</div>
+							<div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
+								<button
+									type="button"
+									onClick={() => void saveFocusBox(true)}
+									className={tabClass(focusBox)}
+								>
+									On
+								</button>
+								<button
+									type="button"
+									onClick={() => void saveFocusBox(false)}
+									className={tabClass(!focusBox)}
+								>
+									Off
 								</button>
 							</div>
 						</div>
