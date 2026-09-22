@@ -7,6 +7,7 @@ const PREF_OPEN_LINKS = "prefs.openLinks";
 const PREF_HIDDEN_MODELS = "prefs.hiddenModels";
 const PREF_OLLAMA_HOST = "prefs.ollamaHost";
 const PREF_OLLAMA_MODEL = "prefs.ollamaModel";
+const PREF_FOCUS_BOX = "prefs.focusBox";
 
 export type OpenLinksMode = "same" | "new";
 
@@ -72,6 +73,10 @@ export const prefs = {
 		return value === "new" ? "new" : "same";
 	},
 	setOpenLinks: (mode: OpenLinksMode) => setValue(PREF_OPEN_LINKS, mode),
+	async getFocusBox(): Promise<boolean> {
+		return (await getValue(PREF_FOCUS_BOX)) !== "off";
+	},
+	setFocusBox: (on: boolean) => setValue(PREF_FOCUS_BOX, on ? "on" : "off"),
 	async getHiddenModels(): Promise<string[]> {
 		const stored = parseHidden(await getValue(PREF_HIDDEN_MODELS));
 		const ollamaConfigured = Boolean(await getValue(PREF_OLLAMA_HOST));
