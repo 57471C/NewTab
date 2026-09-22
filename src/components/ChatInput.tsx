@@ -81,6 +81,7 @@ export default function ChatInput({
 	const [attachError, setAttachError] = useState<string | null>(null);
 	const chassisRef = useRef<HTMLDivElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const inputRef = useRef<HTMLTextAreaElement>(null);
 
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
@@ -94,6 +95,16 @@ export default function ChatInput({
 		};
 		document.addEventListener("mousedown", handleClickOutside);
 		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	useEffect(() => {
+		let cancelled = false;
+		void prefs.getFocusBox().then((on) => {
+			if (!cancelled && on) inputRef.current?.focus();
+		});
+		return () => {
+			cancelled = true;
+		};
 	}, []);
 
 	useEffect(() => {
@@ -214,6 +225,10 @@ export default function ChatInput({
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.key === "Escape") {
+			e.currentTarget.blur();
+			return;
+		}
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
 			if (isStreaming) {
@@ -290,6 +305,7 @@ export default function ChatInput({
 					<p className="px-1 text-[11px] text-red-500 dark:text-red-400">{attachError}</p>
 				)}
 				<textarea
+					ref={inputRef}
 					name="chat-input"
 					value={inputValue}
 					onChange={handleInputResize}
