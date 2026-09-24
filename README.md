@@ -1,6 +1,19 @@
 # NewTab
 
-Chromium MV3 new-tab extension (v1.0.10). Local-first bookmark grid plus streaming chat against Grok, Gemini, Claude, OpenAI, and optional Ollama. Keys live in `chrome.storage.local`. Chat history and the grid live in Dexie / IndexedDB. Nothing of yours is sent to a backend we run.
+Chromium MV3 new-tab extension. Local-first bookmark grid plus streaming chat via Grok, Gemini, Claude, OpenAI, and optional Ollama.
+API Keys live in `chrome.storage.local`. Chat history and the grid live in Dexie / IndexedDB within the browser. Nothing is stored on any remote server ever.
+
+## What it does
+
+- 8-slot grid with favicon fallbacks. Empty tile opens Settings on that row.
+- Same-tab or new-tab for grid clicks (Settings → Grid).
+- Keys **1–8** open those slots. Ignored while the chat box or a form field is focused.
+- Search or URL in the same box; Ctrl/Cmd+Enter forces chat.
+- Streaming chat with markdown, code copy, image attach, stop.
+- Hide unused models under Settings → API keys. Tick Ollama there to show it; host defaults to localhost:11434.
+- Rename threads from the sidebar (pencil or double-click).
+- Provider 401/404/503 land as short lines, not JSON blobs.
+- Toolbar icon toggles a per-tab invert dark mode (http/https pages only).
 
 ## Load unpacked
 
@@ -42,18 +55,6 @@ git push origin v1.0.10
 ```
 
 GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.10.zip` to the Release. They unzip → Load unpacked → the `NewTab` folder. They use their own API keys.
-
-## What it does
-
-- 8-slot grid with favicon fallbacks. Empty tile opens Settings on that row.
-- Same-tab or new-tab for grid clicks (Settings → Grid).
-- Keys **1–8** open those slots. Ignored while the chat box or a form field is focused.
-- Search or URL in the same box; Ctrl/Cmd+Enter forces chat.
-- Streaming chat with markdown, code copy, image attach, stop.
-- Hide unused models under Settings → API keys. Tick Ollama there to show it; host defaults to localhost:11434.
-- Rename threads from the sidebar (pencil or double-click).
-- Provider 401/404/503 land as short lines, not JSON blobs.
-- Toolbar icon toggles a per-tab invert dark mode (http/https pages only).
 
 ## Scripts
 
