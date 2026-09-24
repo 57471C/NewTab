@@ -7,13 +7,14 @@ import ollamaLogoDark from "../assets/ollama-dark.svg";
 import type { ProviderId } from "./api-providers";
 import {
 	DEFAULT_MODEL_SLOTS,
-	labelFromSlug,
+	displayLabel,
 	type ModelSlot,
 } from "./model-slots";
 
 export type { ModelSlot } from "./model-slots";
 export {
 	DEFAULT_MODEL_SLOTS,
+	displayLabel,
 	labelFromSlug,
 	mergeModelSlots,
 	parseStoredSlots,
@@ -49,7 +50,7 @@ export function catalogFromSlots(slots: ModelSlot[]): ChatModel[] {
 		slotId: slot.id,
 		provider: slot.provider,
 		value: slot.value,
-		label: slot.provider === "Ollama" ? "Ollama" : labelFromSlug(slot.value),
+		label: displayLabel(slot),
 		...PROVIDER_MARKS[slot.provider],
 	}));
 }

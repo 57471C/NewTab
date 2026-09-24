@@ -48,6 +48,7 @@ function App() {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [isDarkMode, setIsDarkMode] = useState(true);
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [settingsTick, setSettingsTick] = useState(0);
 	const [focusSlot, setFocusSlot] = useState<number | null>(null);
 	const [toast, setToast] = useState<{
 		type: "success" | "error";
@@ -143,6 +144,7 @@ function App() {
 	const closeSettings = () => {
 		setIsSettingsOpen(false);
 		setFocusSlot(null);
+		setSettingsTick((tick) => tick + 1);
 	};
 
 	const updateShortcutInDB = async (
@@ -454,6 +456,7 @@ function App() {
 					onSubmit={handleSubmit}
 					isStreaming={isStreaming}
 					onStop={stopChat}
+					reloadToken={settingsTick}
 				/>
 			</main>
 

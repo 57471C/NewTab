@@ -86,6 +86,7 @@ export default function ChatInput({
 	onSubmit,
 	isStreaming = false,
 	onStop,
+	reloadToken = 0,
 }: {
 	onSubmit: (
 		query: string,
@@ -96,6 +97,7 @@ export default function ChatInput({
 	) => void;
 	isStreaming?: boolean;
 	onStop?: () => void;
+	reloadToken?: number;
 }) {
 	const [inputValue, setInputValue] = useState("");
 	const [searchEngine, setSearchEngine] = useState("Google");
@@ -216,7 +218,7 @@ export default function ChatInput({
 			cancelled = true;
 			chrome.storage.onChanged.removeListener(onChange);
 		};
-	}, []);
+	}, [reloadToken]);
 
 	const addFiles = async (files: File[]) => {
 		setAttachError(null);

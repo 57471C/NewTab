@@ -4,6 +4,7 @@ export type ModelSlot = {
 	id: string;
 	provider: ProviderId;
 	value: string;
+	label?: string;
 };
 
 export const DEFAULT_MODEL_SLOTS: ModelSlot[] = [
@@ -51,6 +52,13 @@ export function labelFromSlug(slug: string): string {
 	return words.join(" ");
 }
 
+export function displayLabel(slot: ModelSlot): string {
+	const custom = slot.label?.trim();
+	if (custom) return custom;
+	if (slot.provider === "Ollama") return "Ollama";
+	return labelFromSlug(slot.value);
+}
+
 export function parseStoredSlots(raw: string | null): ModelSlot[] {
 	if (!raw) return DEFAULT_MODEL_SLOTS.map((slot) => ({ ...slot }));
 	try {
@@ -61,26 +69,34 @@ export function parseStoredSlots(raw: string | null): ModelSlot[] {
 }
 
 export function mergeModelSlots(stored: unknown): ModelSlot[] {
-	const overrides = new Map<string, string>();
+	const overrides = new Map<string, { value?: string; label?: string }>();
 	if (Array.isArray(stored)) {
 		for (const item of stored) {
 			if (!item || typeof item !== "object") continue;
-			const record = item as { id?: unknown; value?: unknown };
-			if (typeof record.id !== "string" || typeof record.value !== "string") {
-				continue;
-			}
-			const value = record.value.trim();
-			if (!value) continue;
-			overrides.set(record.id, value);
+			const record = item as { id?: unknown; value?: unknown; label?: unknown };
+			if (typeof record.id !== "string") continue;
+			const value =
+				typeof record.value === "string" ? record.value.trim() : "";
+			const label =
+				typeof record.label === "string" ? record.label.trim() : "";
+			if (!value && !label) continue;
+			overrides.set(record.id, {
+				value: value || undefined,
+				label: label || undefined,
+			});
 		}
 	}
-	return DEFAULT_MODEL_SLOTS.map((slot) => ({
-		...slot,
-		value:
-			slot.provider === "Ollama"
-				? "ollama"
-				: overrides.get(slot.id) || slot.value,
-	}));
+	return DEFAULT_MODEL_SLOTS.map((slot) => {
+		const override = overrides.get(slot.id);
+		return {
+			...slot,
+			value:
+				slot.provider === "Ollama"
+					? "ollama"
+					: override?.value || slot.value,
+			label: override?.label,
+		};
+	});
 }
 
 export function slotsForProvider(

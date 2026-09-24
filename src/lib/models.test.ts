@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { resolveProvider } from "./api-providers";
 import {
+	displayLabel,
 	labelFromSlug,
 	mergeModelSlots,
 	parseStoredSlots,
@@ -32,6 +33,15 @@ describe("mergeModelSlots", () => {
 			"grok-4.20-0309-reasoning",
 		);
 		assert.equal(slots.find((slot) => slot.id === "grok-1")?.value, "grok-4.3");
+	});
+
+	it("keeps a custom picker name", () => {
+		const slots = mergeModelSlots([
+			{ id: "grok-0", value: "grok-4.7", label: "Grok flagship" },
+		]);
+		const grok = slots.find((slot) => slot.id === "grok-0");
+		assert.equal(grok?.value, "grok-4.7");
+		assert.equal(displayLabel(grok ?? slots[0]), "Grok flagship");
 	});
 
 	it("ignores empty overrides", () => {

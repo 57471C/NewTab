@@ -2,6 +2,8 @@ import { Pencil, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
 	catalogFromSlots,
+	displayLabel,
+	labelFromSlug,
 	type ModelSlot,
 	slotsForProvider,
 } from "../lib/models";
@@ -60,6 +62,7 @@ export default function SettingsModal({
 	const [hiddenModels, setHiddenModels] = useState<string[]>(["ollama"]);
 	const [slots, setSlots] = useState<ModelSlot[]>([]);
 	const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
+	const [editingField, setEditingField] = useState<"label" | "value">("value");
 	const [slotDraft, setSlotDraft] = useState("");
 	const slotInputRef = useRef<HTMLInputElement>(null);
 	const [ollamaHost, setOllamaHost] = useState(DEFAULT_OLLAMA_HOST);
@@ -211,28 +214,46 @@ export default function SettingsModal({
 		await prefs.setHiddenModels(next);
 	};
 
-	const startEditSlot = (slot: ModelSlot) => {
+	const startEditSlot = (slot: ModelSlot, field: "label" | "value") => {
 		if (slot.provider === "Ollama") return;
 		setEditingSlotId(slot.id);
-		setSlotDraft(slot.value);
+		setEditingField(field);
+		setSlotDraft(
+			field === "label" ? displayLabel(slot) : slot.value,
+		);
 	};
 
 	const commitSlot = async (slotId: string) => {
-		const nextValue = slotDraft.trim();
+		const nextText = slotDraft.trim();
+		const field = editingField;
 		setEditingSlotId(null);
 		const current = slots.find((slot) => slot.id === slotId);
 		if (!current || current.provider === "Ollama") return;
-		if (!nextValue || nextValue === current.value) return;
+
+		if (field === "label") {
+			const auto = labelFromSlug(current.value);
+			const label = !nextText || nextText === auto ? undefined : nextText;
+			if ((current.label || undefined) === label) return;
+			const nextSlots = slots.map((slot) =>
+				slot.id === slotId ? { ...slot, label } : slot,
+			);
+			setSlots(nextSlots);
+			await prefs.setModelSlots(nextSlots);
+			showToast("success", `Picker will show “${label || auto}”.`);
+			return;
+		}
+
+		if (!nextText || nextText === current.value) return;
 		const nextSlots = slots.map((slot) =>
-			slot.id === slotId ? { ...slot, value: nextValue } : slot,
+			slot.id === slotId ? { ...slot, value: nextText } : slot,
 		);
 		setSlots(nextSlots);
 		await prefs.setModelSlots(nextSlots);
 		const selected = await prefs.getModel();
 		if (selected === current.value) {
-			await prefs.setModel(nextValue);
+			await prefs.setModel(nextText);
 		}
-		showToast("success", `Using ${nextValue} in the picker.`);
+		showToast("success", `Using ${nextText} in the picker.`);
 	};
 
 	const catalog = catalogFromSlots(slots);
@@ -394,8 +415,8 @@ export default function SettingsModal({
 				{tab === "keys" && (
 					<div className="mt-4 flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
 						<p className="text-[11px] text-zinc-500">
-							Three slugs per key. Pencil or double-click the id to point at
-							whatever the provider is selling this week.
+							Left name is what the picker shows. Right id is what the API
+							gets. Click either to edit. Empty name falls back to the id.
 						</p>
 						{PROVIDERS.map((provider) => (
 							<div key={provider.id} className="flex flex-col gap-1.5">
@@ -440,6 +461,7 @@ export default function SettingsModal({
 										);
 										const visible = !hiddenModels.includes(slot.id);
 										const editing = editingSlotId === slot.id;
+										const pretty = model?.label ?? displayLabel(slot);
 										return (
 											<div
 												key={slot.id}
@@ -450,14 +472,41 @@ export default function SettingsModal({
 													checked={visible}
 													onChange={() => void toggleModelHidden(slot.id)}
 													className="rounded border-zinc-300 text-zinc-900 dark:border-zinc-600"
-													aria-label={`Show ${model?.label ?? slot.value} in picker`}
+													aria-label={`Show ${pretty} in picker`}
 												/>
-												<span
-													className={`min-w-0 flex-1 truncate ${visible ? "" : "text-zinc-400 dark:text-zinc-600"}`}
-												>
-													{model?.label ?? slot.value}
-												</span>
-												{editing ? (
+												{editing && editingField === "label" ? (
+													<input
+														ref={slotInputRef}
+														value={slotDraft}
+														onChange={(event) =>
+															setSlotDraft(event.target.value)
+														}
+														onBlur={() => void commitSlot(slot.id)}
+														onKeyDown={(event) => {
+															if (event.key === "Enter") {
+																event.preventDefault();
+																void commitSlot(slot.id);
+															}
+															if (event.key === "Escape") {
+																event.preventDefault();
+																event.stopPropagation();
+																setEditingSlotId(null);
+															}
+														}}
+														spellCheck={false}
+														className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-800 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+													/>
+												) : (
+													<button
+														type="button"
+														onClick={() => startEditSlot(slot, "label")}
+														className={`min-w-0 flex-1 truncate text-left ${visible ? "" : "text-zinc-400 dark:text-zinc-600"}`}
+														title="Edit picker name"
+													>
+														{pretty}
+													</button>
+												)}
+												{editing && editingField === "value" ? (
 													<input
 														ref={slotInputRef}
 														value={slotDraft}
@@ -482,8 +531,7 @@ export default function SettingsModal({
 												) : (
 													<button
 														type="button"
-														onDoubleClick={() => startEditSlot(slot)}
-														onClick={() => startEditSlot(slot)}
+														onClick={() => startEditSlot(slot, "value")}
 														className="truncate font-mono text-[11px] text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200"
 														title="Edit API model id"
 													>
@@ -492,9 +540,9 @@ export default function SettingsModal({
 												)}
 												<button
 													type="button"
-													onClick={() => startEditSlot(slot)}
+													onClick={() => startEditSlot(slot, "label")}
 													className="rounded p-0.5 text-zinc-400 opacity-0 transition-opacity hover:text-zinc-800 group-hover:opacity-100 dark:hover:text-zinc-100"
-													aria-label={`Edit ${slot.value}`}
+													aria-label={`Rename ${pretty}`}
 												>
 													<Pencil size={12} />
 												</button>
