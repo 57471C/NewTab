@@ -105,3 +105,12 @@ export function slotsForProvider(
 ): ModelSlot[] {
 	return slots.filter((slot) => slot.provider === provider);
 }
+
+export function normalizeHiddenModels(
+	hidden: string[],
+	slots: ModelSlot[] = DEFAULT_MODEL_SLOTS,
+): string[] {
+	const known = new Set(slots.map((slot) => slot.id));
+	known.add("ollama");
+	return hidden.filter((item) => known.has(item));
+}

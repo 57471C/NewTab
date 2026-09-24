@@ -25,9 +25,7 @@ function firstReadyModel(
 	hidden: string[],
 	preferred?: string | null,
 ) {
-	const visible = catalog.filter(
-		(model) => !hidden.includes(model.slotId) && !hidden.includes(model.value),
-	);
+	const visible = catalog.filter((model) => !hidden.includes(model.slotId));
 	const pool = visible.length ? visible : catalog;
 	if (preferred) {
 		const match = pool.find((model) => model.value === preferred);
@@ -309,9 +307,7 @@ export default function ChatInput({
 	};
 
 	const visibleModels = catalog.filter(
-		(model) =>
-			!hiddenModels.includes(model.slotId) &&
-			!hiddenModels.includes(model.value),
+		(model) => !hiddenModels.includes(model.slotId),
 	);
 	const pickerModels = visibleModels.length ? visibleModels : catalog;
 	const selectedModel =

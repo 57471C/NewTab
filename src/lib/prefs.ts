@@ -1,6 +1,10 @@
 /// <reference types="chrome" />
 
-import { type ModelSlot, parseStoredSlots } from "./model-slots";
+import {
+	type ModelSlot,
+	normalizeHiddenModels,
+	parseStoredSlots,
+} from "./model-slots";
 
 const PREF_MODEL = "prefs.aiModel";
 const PREF_ENGINE = "prefs.searchEngine";
@@ -86,10 +90,18 @@ export const prefs = {
 	},
 	setFocusBox: (on: boolean) => setValue(PREF_FOCUS_BOX, on ? "on" : "off"),
 	async getHiddenModels(): Promise<string[]> {
-		return resolveHiddenModels(await getValue(PREF_HIDDEN_MODELS));
+		const slots = parseStoredSlots(await getValue(PREF_MODEL_SLOTS));
+		const hidden = normalizeHiddenModels(
+			resolveHiddenModels(await getValue(PREF_HIDDEN_MODELS)),
+			slots,
+		);
+		return hidden;
 	},
 	setHiddenModels: (models: string[]) =>
-		setValue(PREF_HIDDEN_MODELS, JSON.stringify(models)),
+		setValue(
+			PREF_HIDDEN_MODELS,
+			JSON.stringify(normalizeHiddenModels(models)),
+		),
 	async getOllamaHost(): Promise<string> {
 		return (await getValue(PREF_OLLAMA_HOST)) || DEFAULT_OLLAMA_HOST;
 	},

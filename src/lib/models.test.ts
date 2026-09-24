@@ -5,6 +5,7 @@ import {
 	displayLabel,
 	labelFromSlug,
 	mergeModelSlots,
+	normalizeHiddenModels,
 	parseStoredSlots,
 } from "./model-slots";
 
@@ -57,6 +58,22 @@ describe("parseStoredSlots", () => {
 	it("falls back to defaults on junk json", () => {
 		const slots = parseStoredSlots("{nope");
 		assert.equal(slots[0].value, "gemini-3.8-flash");
+	});
+});
+
+describe("normalizeHiddenModels", () => {
+	it("drops leftover slug hides from the old picker list", () => {
+		assert.deepEqual(
+			normalizeHiddenModels(["ollama", "grok-build-0.1", "gpt-4o"]),
+			["ollama"],
+		);
+	});
+
+	it("keeps slot ids", () => {
+		assert.deepEqual(normalizeHiddenModels(["grok-2", "ollama"]), [
+			"grok-2",
+			"ollama",
+		]);
 	});
 });
 
