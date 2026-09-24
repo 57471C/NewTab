@@ -50,7 +50,7 @@ GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.10.zip` to the 
 - Keys **1–8** open those slots. Ignored while the chat box or a form field is focused.
 - Search or URL in the same box; Ctrl/Cmd+Enter forces chat.
 - Streaming chat with markdown, code copy, image attach, stop.
-- Hide unused models under Settings → API keys. Ollama stays hidden until you save a local host.
+- Hide unused models under Settings → API keys. Tick Ollama there to show it; host defaults to localhost:11434.
 - Rename threads from the sidebar (pencil or double-click).
 - Provider 401/404/503 land as short lines, not JSON blobs.
 - Toolbar icon toggles a per-tab invert dark mode (http/https pages only).

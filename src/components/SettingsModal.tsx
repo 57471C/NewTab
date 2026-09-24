@@ -377,8 +377,8 @@ export default function SettingsModal({
 								Ollama
 							</p>
 							<p className="mt-1 text-[11px] text-zinc-500">
-								Hidden from the picker until you save a host. No API key. Model
-								name must match `ollama list`.
+								No API key. Tick Ollama below to show it in the picker. Host
+								defaults to localhost:11434. Model name must match `ollama list`.
 							</p>
 							<div className="mt-3 grid grid-cols-[1.4fr_1fr_auto] gap-2">
 								<input
@@ -410,8 +410,8 @@ export default function SettingsModal({
 								Models in the picker
 							</p>
 							<p className="mt-1 text-[11px] text-zinc-500">
-								Cloud models are shown by default. Ollama appears after you save
-								a local host.
+								Tick a model to show it in the picker. Ollama uses the host
+								above, or localhost if you have not saved one.
 							</p>
 							<div className="mt-3 grid grid-cols-2 gap-1.5">
 								{AI_MODELS.map((model) => {
