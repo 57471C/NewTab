@@ -13,7 +13,7 @@ export type OpenLinksMode = "same" | "new";
 
 export const DEFAULT_OLLAMA_HOST = "http://localhost:11434";
 export const DEFAULT_OLLAMA_MODEL = "llama3.2";
-const OLLAMA_MODEL_VALUE = "ollama";
+export const OLLAMA_MODEL_VALUE = "ollama";
 
 const memoryPrefs = new Map<string, string>();
 
@@ -58,6 +58,11 @@ function parseHidden(value: string | null): string[] {
 	}
 }
 
+export function resolveHiddenModels(storedRaw: string | null): string[] {
+	if (storedRaw === null) return [OLLAMA_MODEL_VALUE];
+	return parseHidden(storedRaw);
+}
+
 export const prefs = {
 	getModel: () => getValue(PREF_MODEL),
 	setModel: (model: string) => setValue(PREF_MODEL, model),
@@ -78,12 +83,7 @@ export const prefs = {
 	},
 	setFocusBox: (on: boolean) => setValue(PREF_FOCUS_BOX, on ? "on" : "off"),
 	async getHiddenModels(): Promise<string[]> {
-		const stored = parseHidden(await getValue(PREF_HIDDEN_MODELS));
-		const ollamaConfigured = Boolean(await getValue(PREF_OLLAMA_HOST));
-		if (!ollamaConfigured && !stored.includes(OLLAMA_MODEL_VALUE)) {
-			return [...stored, OLLAMA_MODEL_VALUE];
-		}
-		return stored;
+		return resolveHiddenModels(await getValue(PREF_HIDDEN_MODELS));
 	},
 	setHiddenModels: (models: string[]) =>
 		setValue(PREF_HIDDEN_MODELS, JSON.stringify(models)),
