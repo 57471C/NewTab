@@ -77,11 +77,11 @@ Friends do not need Node. Tag a version from `main`:
 ```bash
 git checkout main
 git pull
-git tag v1.0.10
-git push origin v1.0.10
+git tag v1.0.11
+git push origin v1.0.11
 ```
 
-GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.10.zip` to the Release.
+GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.11.zip` to the Release.
 
 ### Scripts
 
