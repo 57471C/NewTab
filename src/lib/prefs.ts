@@ -1,5 +1,11 @@
 /// <reference types="chrome" />
 
+import {
+	type ModelSlot,
+	normalizeHiddenModels,
+	parseStoredSlots,
+} from "./model-slots";
+
 const PREF_MODEL = "prefs.aiModel";
 const PREF_ENGINE = "prefs.searchEngine";
 const PREF_THEME = "prefs.theme";
@@ -8,6 +14,7 @@ const PREF_HIDDEN_MODELS = "prefs.hiddenModels";
 const PREF_OLLAMA_HOST = "prefs.ollamaHost";
 const PREF_OLLAMA_MODEL = "prefs.ollamaModel";
 const PREF_FOCUS_BOX = "prefs.focusBox";
+const PREF_MODEL_SLOTS = "prefs.modelSlots";
 
 export type OpenLinksMode = "same" | "new";
 
@@ -83,10 +90,18 @@ export const prefs = {
 	},
 	setFocusBox: (on: boolean) => setValue(PREF_FOCUS_BOX, on ? "on" : "off"),
 	async getHiddenModels(): Promise<string[]> {
-		return resolveHiddenModels(await getValue(PREF_HIDDEN_MODELS));
+		const slots = parseStoredSlots(await getValue(PREF_MODEL_SLOTS));
+		const hidden = normalizeHiddenModels(
+			resolveHiddenModels(await getValue(PREF_HIDDEN_MODELS)),
+			slots,
+		);
+		return hidden;
 	},
 	setHiddenModels: (models: string[]) =>
-		setValue(PREF_HIDDEN_MODELS, JSON.stringify(models)),
+		setValue(
+			PREF_HIDDEN_MODELS,
+			JSON.stringify(normalizeHiddenModels(models)),
+		),
 	async getOllamaHost(): Promise<string> {
 		return (await getValue(PREF_OLLAMA_HOST)) || DEFAULT_OLLAMA_HOST;
 	},
@@ -95,4 +110,9 @@ export const prefs = {
 		return (await getValue(PREF_OLLAMA_MODEL)) || DEFAULT_OLLAMA_MODEL;
 	},
 	setOllamaModel: (model: string) => setValue(PREF_OLLAMA_MODEL, model),
+	async getModelSlots(): Promise<ModelSlot[]> {
+		return parseStoredSlots(await getValue(PREF_MODEL_SLOTS));
+	},
+	setModelSlots: (slots: ModelSlot[]) =>
+		setValue(PREF_MODEL_SLOTS, JSON.stringify(slots)),
 };

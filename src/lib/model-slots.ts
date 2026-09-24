@@ -1,0 +1,116 @@
+import type { ProviderId } from "./api-providers";
+
+export type ModelSlot = {
+	id: string;
+	provider: ProviderId;
+	value: string;
+	label?: string;
+};
+
+export const DEFAULT_MODEL_SLOTS: ModelSlot[] = [
+	{ id: "gemini-0", provider: "Gemini", value: "gemini-3.8-flash" },
+	{ id: "gemini-1", provider: "Gemini", value: "gemini-3.1-pro-preview" },
+	{ id: "gemini-2", provider: "Gemini", value: "gemini-3.5-flash-lite" },
+	{ id: "claude-0", provider: "Claude", value: "claude-sonnet-5" },
+	{ id: "claude-1", provider: "Claude", value: "claude-opus-5-5" },
+	{ id: "claude-2", provider: "Claude", value: "claude-haiku-4-5" },
+	{ id: "openai-0", provider: "GPT-4", value: "gpt-6-astra" },
+	{ id: "openai-1", provider: "GPT-4", value: "gpt-6-sol" },
+	{ id: "openai-2", provider: "GPT-4", value: "gpt-6-luna" },
+	{ id: "grok-0", provider: "Grok", value: "grok-4.7" },
+	{ id: "grok-1", provider: "Grok", value: "grok-4.3" },
+	{ id: "grok-2", provider: "Grok", value: "grok-build-0.1" },
+	{ id: "ollama", provider: "Ollama", value: "ollama" },
+];
+
+export function labelFromSlug(slug: string): string {
+	const raw = slug.trim();
+	if (!raw) return "Model";
+	const tokens = raw.split(/[-_./]+/).filter(Boolean);
+	const words: string[] = [];
+	for (const token of tokens) {
+		const lower = token.toLowerCase();
+		if (lower === "gpt") {
+			words.push("GPT");
+			continue;
+		}
+		if (lower === "tts" || lower === "stt") {
+			words.push(lower.toUpperCase());
+			continue;
+		}
+		if (/^\d+(\.\d+)*$/.test(token)) {
+			const last = words[words.length - 1];
+			if (last && /^\d+(\.\d+)*$/.test(last)) {
+				words[words.length - 1] = `${last}.${token}`;
+				continue;
+			}
+			words.push(token);
+			continue;
+		}
+		words.push(token.charAt(0).toUpperCase() + token.slice(1));
+	}
+	return words.join(" ");
+}
+
+export function displayLabel(slot: ModelSlot): string {
+	const custom = slot.label?.trim();
+	if (custom) return custom;
+	if (slot.provider === "Ollama") return "Ollama";
+	return labelFromSlug(slot.value);
+}
+
+export function parseStoredSlots(raw: string | null): ModelSlot[] {
+	if (!raw) return DEFAULT_MODEL_SLOTS.map((slot) => ({ ...slot }));
+	try {
+		return mergeModelSlots(JSON.parse(raw));
+	} catch {
+		return DEFAULT_MODEL_SLOTS.map((slot) => ({ ...slot }));
+	}
+}
+
+export function mergeModelSlots(stored: unknown): ModelSlot[] {
+	const overrides = new Map<string, { value?: string; label?: string }>();
+	if (Array.isArray(stored)) {
+		for (const item of stored) {
+			if (!item || typeof item !== "object") continue;
+			const record = item as { id?: unknown; value?: unknown; label?: unknown };
+			if (typeof record.id !== "string") continue;
+			const value =
+				typeof record.value === "string" ? record.value.trim() : "";
+			const label =
+				typeof record.label === "string" ? record.label.trim() : "";
+			if (!value && !label) continue;
+			overrides.set(record.id, {
+				value: value || undefined,
+				label: label || undefined,
+			});
+		}
+	}
+	return DEFAULT_MODEL_SLOTS.map((slot) => {
+		const override = overrides.get(slot.id);
+		return {
+			...slot,
+			value:
+				slot.provider === "Ollama"
+					? "ollama"
+					: override?.value || slot.value,
+			label: override?.label,
+		};
+	});
+}
+
+export function slotsForProvider(
+	slots: ModelSlot[],
+	provider: ProviderId,
+): ModelSlot[] {
+	return slots.filter((slot) => slot.provider === provider);
+}
+
+export function normalizeHiddenModels(
+	hidden: string[],
+	slots: ModelSlot[] = DEFAULT_MODEL_SLOTS,
+): string[] {
+	const known = new Set(slots.map((slot) => slot.id));
+	known.add("ollama");
+	return hidden.filter((item) => known.has(item));
+}

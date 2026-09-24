@@ -1,10 +1,7 @@
 import { useRef, useState } from "react";
 import { formatApiError, formatCaughtError } from "../lib/api-errors";
 import { getProviderConfig, resolveProvider } from "../lib/api-providers";
-import {
-	type ChatAttachment,
-	attachmentNote,
-} from "../lib/attachments";
+import { attachmentNote, type ChatAttachment } from "../lib/attachments";
 import { appendMessage, db } from "../lib/db";
 import { prefs } from "../lib/prefs";
 import { extractTokenFromChunk } from "../lib/streaming";
@@ -46,7 +43,12 @@ export function useStreamingChat() {
 		let assistantContent = "";
 		let aborted = false;
 		try {
-			const provider = resolveProvider(model);
+			const [ollamaHost, ollamaModel, slots] = await Promise.all([
+				prefs.getOllamaHost(),
+				prefs.getOllamaModel(),
+				prefs.getModelSlots(),
+			]);
+			const provider = resolveProvider(model, slots);
 			if (provider !== "Ollama") {
 				apiKey = await vault.get(provider);
 				if (!apiKey) {
@@ -66,11 +68,6 @@ export function useStreamingChat() {
 			const storedPrompt = `${prompt}${attachmentNote(attachments)}`.trim();
 			await appendMessage(chatId, "user", storedPrompt);
 
-			const [ollamaHost, ollamaModel] = await Promise.all([
-				prefs.getOllamaHost(),
-				prefs.getOllamaModel(),
-			]);
-
 			const { endpoint, headers, payload } = getProviderConfig(
 				model,
 				apiKey,
@@ -81,7 +78,7 @@ export function useStreamingChat() {
 					})),
 					{ role: "user", content: prompt, attachments },
 				],
-				{ ollamaHost, ollamaModel },
+				{ ollamaHost, ollamaModel, slots },
 			);
 
 			const decoder = new TextDecoder("utf-8");
@@ -112,7 +109,11 @@ export function useStreamingChat() {
 				}
 			};
 
-			if (provider === "Claude" && typeof chrome !== "undefined" && chrome.runtime) {
+			if (
+				provider === "Claude" &&
+				typeof chrome !== "undefined" &&
+				chrome.runtime
+			) {
 				await new Promise<void>((resolve, reject) => {
 					const port = chrome.runtime.connect({ name: "anthropic-proxy" });
 					portRef.current = port;
@@ -220,5 +221,11 @@ export function useStreamingChat() {
 		}
 	};
 
-	return { streamChat, stopChat, isStreaming, streamingContent, streamingChatId };
+	return {
+		streamChat,
+		stopChat,
+		isStreaming,
+		streamingContent,
+		streamingChatId,
+	};
 }

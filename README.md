@@ -26,7 +26,8 @@ Pin the toolbar icon (puzzle piece → pin NewTab Assistant) if you want the sit
 - Keys **1–8** open those slots. Ignored while the chat box or a form field is focused.
 - Search or URL in the same box; Ctrl/Cmd+Enter forces chat.
 - Streaming chat with markdown, code copy, image attach, stop.
-- Hide unused models under Settings → API keys. Tick Ollama there to show it; host defaults to localhost:11434.
+- Three editable models per API key. Click the pretty name or the API id under Settings → API keys. Tick the row to show it in the picker.
+- Tick Ollama under Settings → API keys to show it; host defaults to localhost:11434.
 - Rename threads from the sidebar (pencil or double-click).
 - Provider 401/404/503 land as short lines, not JSON blobs.
 
