@@ -3,17 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import bingLogo from "../assets/bing.svg";
 import duckduckgoLogo from "../assets/duckduckgo.svg";
 import googleLogo from "../assets/google.svg";
-import {
-	isProviderReady,
-	type ProviderId,
-	resolveProvider,
-} from "../lib/api-providers";
+import { isProviderReady, type ProviderId } from "../lib/api-providers";
 import {
 	type ChatAttachment,
 	MAX_ATTACHMENTS,
 	readImageFile,
 } from "../lib/attachments";
-import { AI_MODELS, type ChatModel } from "../lib/models";
+import { AI_MODELS, type ChatModel, catalogFromSlots } from "../lib/models";
 import { prefs } from "../lib/prefs";
 import { PROVIDER_IDS, vault } from "../lib/vault";
 
@@ -24,20 +20,23 @@ const SEARCH_ENGINES = [
 ] as const;
 
 function firstReadyModel(
+	catalog: ChatModel[],
 	ready: Set<ProviderId>,
 	hidden: string[],
 	preferred?: string | null,
 ) {
-	const visible = AI_MODELS.filter((model) => !hidden.includes(model.value));
-	const pool = visible.length ? visible : AI_MODELS;
+	const visible = catalog.filter(
+		(model) => !hidden.includes(model.slotId) && !hidden.includes(model.value),
+	);
+	const pool = visible.length ? visible : catalog;
 	if (preferred) {
 		const match = pool.find((model) => model.value === preferred);
-		if (match && isProviderReady(resolveProvider(match.value), ready)) {
+		if (match && isProviderReady(match.provider, ready)) {
 			return match.value;
 		}
 	}
 	const available = pool.find((model) =>
-		isProviderReady(resolveProvider(model.value), ready),
+		isProviderReady(model.provider, ready),
 	);
 	return available?.value ?? pool[0].value;
 }
@@ -107,6 +106,7 @@ export default function ChatInput({
 		new Set(),
 	);
 	const [hiddenModels, setHiddenModels] = useState<string[]>([]);
+	const [catalog, setCatalog] = useState<ChatModel[]>(AI_MODELS);
 	const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
 	const [attachError, setAttachError] = useState<string | null>(null);
 	const chassisRef = useRef<HTMLDivElement>(null);
@@ -141,17 +141,21 @@ export default function ChatInput({
 		let cancelled = false;
 
 		const hydrate = async () => {
-			const [savedModel, savedEngine, configured, hidden] = await Promise.all([
-				prefs.getModel(),
-				prefs.getEngine(),
-				vault.configured(),
-				prefs.getHiddenModels(),
-			]);
+			const [savedModel, savedEngine, configured, hidden, slots] =
+				await Promise.all([
+					prefs.getModel(),
+					prefs.getEngine(),
+					vault.configured(),
+					prefs.getHiddenModels(),
+					prefs.getModelSlots(),
+				]);
 			if (cancelled) return;
+			const nextCatalog = catalogFromSlots(slots);
+			setCatalog(nextCatalog);
 			setReadyProviders(configured);
 			setHiddenModels(hidden);
 			if (savedEngine) setSearchEngine(savedEngine);
-			setAiModel(firstReadyModel(configured, hidden, savedModel));
+			setAiModel(firstReadyModel(nextCatalog, configured, hidden, savedModel));
 		};
 
 		void hydrate();
@@ -168,11 +172,18 @@ export default function ChatInput({
 		) => {
 			if (area !== "local") return;
 			if (PROVIDER_IDS.some((provider) => provider in changes)) {
-				void vault.configured().then((configured) => {
+				void Promise.all([
+					vault.configured(),
+					prefs.getHiddenModels(),
+					prefs.getModelSlots(),
+				]).then(([configured, hidden, slots]) => {
 					if (cancelled) return;
+					const nextCatalog = catalogFromSlots(slots);
+					setCatalog(nextCatalog);
 					setReadyProviders(configured);
+					setHiddenModels(hidden);
 					setAiModel((current) =>
-						firstReadyModel(configured, hiddenModels, current),
+						firstReadyModel(nextCatalog, configured, hidden, current),
 					);
 				});
 			}
@@ -182,12 +193,19 @@ export default function ChatInput({
 			if (changes["prefs.searchEngine"]?.newValue) {
 				setSearchEngine(String(changes["prefs.searchEngine"].newValue));
 			}
-			if (changes["prefs.hiddenModels"]) {
-				void prefs.getHiddenModels().then((hidden) => {
+			if (changes["prefs.hiddenModels"] || changes["prefs.modelSlots"]) {
+				void Promise.all([
+					prefs.getHiddenModels(),
+					prefs.getModelSlots(),
+					vault.configured(),
+				]).then(([hidden, slots, configured]) => {
 					if (cancelled) return;
+					const nextCatalog = catalogFromSlots(slots);
+					setCatalog(nextCatalog);
 					setHiddenModels(hidden);
+					setReadyProviders(configured);
 					setAiModel((current) =>
-						firstReadyModel(readyProviders, hidden, current),
+						firstReadyModel(nextCatalog, configured, hidden, current),
 					);
 				});
 			}
@@ -288,19 +306,18 @@ export default function ChatInput({
 		void addFiles(files);
 	};
 
-	const visibleModels = AI_MODELS.filter(
-		(model) => !hiddenModels.includes(model.value),
+	const visibleModels = catalog.filter(
+		(model) =>
+			!hiddenModels.includes(model.slotId) &&
+			!hiddenModels.includes(model.value),
 	);
-	const pickerModels = visibleModels.length ? visibleModels : AI_MODELS;
+	const pickerModels = visibleModels.length ? visibleModels : catalog;
 	const selectedModel =
 		pickerModels.find((m) => m.value === aiModel) || pickerModels[0];
 	const selectedEngine =
 		SEARCH_ENGINES.find((engine) => engine.label === searchEngine) ||
 		SEARCH_ENGINES[0];
-	const selectedReady = isProviderReady(
-		resolveProvider(selectedModel.value),
-		readyProviders,
-	);
+	const selectedReady = isProviderReady(selectedModel.provider, readyProviders);
 
 	return (
 		<div className="mx-auto w-full max-w-3xl px-4 pb-8">
@@ -439,12 +456,12 @@ export default function ChatInput({
 								>
 									{pickerModels.map((model) => {
 										const ready = isProviderReady(
-											resolveProvider(model.value),
+											model.provider,
 											readyProviders,
 										);
 										return (
 											<button
-												key={model.value}
+												key={model.slotId}
 												type="button"
 												disabled={!ready}
 												title={ready ? undefined : "Add an API key in Settings"}

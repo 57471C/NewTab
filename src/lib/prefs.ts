@@ -1,5 +1,7 @@
 /// <reference types="chrome" />
 
+import { type ModelSlot, parseStoredSlots } from "./model-slots";
+
 const PREF_MODEL = "prefs.aiModel";
 const PREF_ENGINE = "prefs.searchEngine";
 const PREF_THEME = "prefs.theme";
@@ -8,6 +10,7 @@ const PREF_HIDDEN_MODELS = "prefs.hiddenModels";
 const PREF_OLLAMA_HOST = "prefs.ollamaHost";
 const PREF_OLLAMA_MODEL = "prefs.ollamaModel";
 const PREF_FOCUS_BOX = "prefs.focusBox";
+const PREF_MODEL_SLOTS = "prefs.modelSlots";
 
 export type OpenLinksMode = "same" | "new";
 
@@ -95,4 +98,9 @@ export const prefs = {
 		return (await getValue(PREF_OLLAMA_MODEL)) || DEFAULT_OLLAMA_MODEL;
 	},
 	setOllamaModel: (model: string) => setValue(PREF_OLLAMA_MODEL, model),
+	async getModelSlots(): Promise<ModelSlot[]> {
+		return parseStoredSlots(await getValue(PREF_MODEL_SLOTS));
+	},
+	setModelSlots: (slots: ModelSlot[]) =>
+		setValue(PREF_MODEL_SLOTS, JSON.stringify(slots)),
 };

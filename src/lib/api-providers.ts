@@ -1,5 +1,6 @@
 import type { ChatAttachment } from "./attachments";
 import { splitDataUrl } from "./attachments";
+import type { ModelSlot } from "./model-slots";
 import { DEFAULT_OLLAMA_HOST, DEFAULT_OLLAMA_MODEL } from "./prefs";
 
 export interface ChatTurn {
@@ -19,6 +20,7 @@ export type ProviderId = "Grok" | "Gemini" | "Claude" | "GPT-4" | "Ollama";
 export type ProviderOptions = {
 	ollamaHost?: string;
 	ollamaModel?: string;
+	slots?: ModelSlot[];
 };
 
 const HISTORY_LIMIT = 20;
@@ -29,7 +31,12 @@ const GEMINI_ALIASES: Record<string, string> = {
 	Gemini: "gemini-3.8-flash",
 };
 
-export function resolveProvider(model: string): ProviderId {
+export function resolveProvider(
+	model: string,
+	slots: ModelSlot[] = [],
+): ProviderId {
+	const fromSlot = slots.find((slot) => slot.value === model);
+	if (fromSlot) return fromSlot.provider;
 	const id = model.toLowerCase();
 	if (id.startsWith("ollama") || model === "Ollama") return "Ollama";
 	if (id.startsWith("grok") || model === "Grok") return "Grok";
@@ -116,7 +123,7 @@ export function getProviderConfig(
 	options: ProviderOptions = {},
 ): ProviderConfig {
 	const turns = visibleTurns(messages);
-	const provider = resolveProvider(model);
+	const provider = resolveProvider(model, options.slots);
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
 	};
