@@ -4,8 +4,8 @@ import bingLogo from "../assets/bing.svg";
 import duckduckgoLogo from "../assets/duckduckgo.svg";
 import googleLogo from "../assets/google.svg";
 import {
-	type ProviderId,
 	isProviderReady,
+	type ProviderId,
 	resolveProvider,
 } from "../lib/api-providers";
 import {
@@ -13,7 +13,7 @@ import {
 	MAX_ATTACHMENTS,
 	readImageFile,
 } from "../lib/attachments";
-import { AI_MODELS } from "../lib/models";
+import { AI_MODELS, type ChatModel } from "../lib/models";
 import { prefs } from "../lib/prefs";
 import { PROVIDER_IDS, vault } from "../lib/vault";
 
@@ -46,6 +46,36 @@ function modelIconTone(model: { invert?: boolean; invertLight?: boolean }) {
 	if (model.invertLight) return "invert dark:invert-0";
 	if (model.invert) return "dark:invert";
 	return "";
+}
+
+function ModelMark({
+	model,
+	ready = true,
+}: {
+	model: ChatModel;
+	ready?: boolean;
+}) {
+	const faded = ready ? "" : "opacity-40";
+	const shared = `h-[14px] w-[14px] object-contain ${faded}`;
+	if (!model.iconDark) {
+		return (
+			<img
+				src={model.icon}
+				alt={`${model.label} logo`}
+				className={`${shared} ${modelIconTone(model)}`}
+			/>
+		);
+	}
+	return (
+		<span className="inline-flex h-[14px] w-[14px] shrink-0">
+			<img src={model.icon} alt="" className={`${shared} dark:hidden`} />
+			<img
+				src={model.iconDark}
+				alt={`${model.label} logo`}
+				className={`${shared} hidden dark:block`}
+			/>
+		</span>
+	);
 }
 
 const chipClass =
@@ -141,7 +171,9 @@ export default function ChatInput({
 				void vault.configured().then((configured) => {
 					if (cancelled) return;
 					setReadyProviders(configured);
-					setAiModel((current) => firstReadyModel(configured, hiddenModels, current));
+					setAiModel((current) =>
+						firstReadyModel(configured, hiddenModels, current),
+					);
 				});
 			}
 			if (changes["prefs.aiModel"]?.newValue) {
@@ -154,7 +186,9 @@ export default function ChatInput({
 				void prefs.getHiddenModels().then((hidden) => {
 					if (cancelled) return;
 					setHiddenModels(hidden);
-					setAiModel((current) => firstReadyModel(readyProviders, hidden, current));
+					setAiModel((current) =>
+						firstReadyModel(readyProviders, hidden, current),
+					);
 				});
 			}
 		};
@@ -221,7 +255,13 @@ export default function ChatInput({
 			}
 		}
 
-		onSubmit(query, searchEngine, aiModel, forceChat || pending.length > 0, pending);
+		onSubmit(
+			query,
+			searchEngine,
+			aiModel,
+			forceChat || pending.length > 0,
+			pending,
+		);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -248,7 +288,9 @@ export default function ChatInput({
 		void addFiles(files);
 	};
 
-	const visibleModels = AI_MODELS.filter((model) => !hiddenModels.includes(model.value));
+	const visibleModels = AI_MODELS.filter(
+		(model) => !hiddenModels.includes(model.value),
+	);
 	const pickerModels = visibleModels.length ? visibleModels : AI_MODELS;
 	const selectedModel =
 		pickerModels.find((m) => m.value === aiModel) || pickerModels[0];
@@ -302,7 +344,9 @@ export default function ChatInput({
 					</div>
 				)}
 				{attachError && (
-					<p className="px-1 text-[11px] text-red-500 dark:text-red-400">{attachError}</p>
+					<p className="px-1 text-[11px] text-red-500 dark:text-red-400">
+						{attachError}
+					</p>
 				)}
 				<textarea
 					ref={inputRef}
@@ -386,15 +430,13 @@ export default function ChatInput({
 								}}
 								className={`${chipClass} ${selectedReady ? "" : "text-zinc-400 dark:text-zinc-500"}`}
 							>
-								<img
-									src={selectedModel.icon}
-									alt={`${selectedModel.label} logo`}
-									className={`h-[14px] w-[14px] object-contain ${modelIconTone(selectedModel)} ${selectedReady ? "" : "opacity-40"}`}
-								/>
+								<ModelMark model={selectedModel} ready={selectedReady} />
 								<span>{selectedModel.label}</span>
 							</button>
 							{isModelMenuOpen && (
-								<div className={`${menuClass} right-0 max-h-56 w-56 overflow-y-auto`}>
+								<div
+									className={`${menuClass} right-0 max-h-56 w-56 overflow-y-auto`}
+								>
 									{pickerModels.map((model) => {
 										const ready = isProviderReady(
 											resolveProvider(model.value),
@@ -416,14 +458,12 @@ export default function ChatInput({
 														: "cursor-default text-zinc-400 dark:text-zinc-600"
 												}`}
 											>
-												<img
-													src={model.icon}
-													alt={`${model.label} logo`}
-													className={`h-[14px] w-[14px] object-contain ${modelIconTone(model)} ${ready ? "" : "opacity-30"}`}
-												/>
+												<ModelMark model={model} ready={ready} />
 												<span className="flex-1 truncate">{model.label}</span>
 												{!ready && (
-													<span className="text-[10px] text-zinc-400 dark:text-zinc-600">No key</span>
+													<span className="text-[10px] text-zinc-400 dark:text-zinc-600">
+														No key
+													</span>
 												)}
 											</button>
 										);
