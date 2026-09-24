@@ -17,6 +17,8 @@ Add your own API keys in Settings → API keys. Keys stay on this machine.
 
 To update later, download the newer zip, unzip over the same folder (or load the new folder), then click **Reload** on the extension card. If the toolbar icon or new-tab page looks stale, Remove the extension and Load unpacked again.
 
+Pin the toolbar icon (puzzle piece → pin NewTab Assistant) if you want the site dark-mode toggle in reach.
+
 ## What it does
 
 - 8-slot grid with favicon fallbacks. Empty tile opens Settings on that row.
@@ -27,7 +29,17 @@ To update later, download the newer zip, unzip over the same folder (or load the
 - Hide unused models under Settings → API keys. Tick Ollama there to show it; host defaults to localhost:11434.
 - Rename threads from the sidebar (pencil or double-click).
 - Provider 401/404/503 land as short lines, not JSON blobs.
-- Toolbar icon toggles a per-tab invert dark mode (http/https pages only).
+
+## Force dark mode on other sites
+
+The new-tab page has its own light/dark switch in the sidebar. Separate from that, the toolbar icon forces a dark invert on the site in the current tab. Handy when a page has no dark theme, or a poor one.
+
+- Click the toolbar icon (or Alt+Shift+D; on Mac, Control+Shift+D) to toggle that tab only.
+- Images, video, and similar media are inverted back so they do not look like film negatives.
+- It only runs on `http` / `https` pages. Browser settings pages (`chrome://`, `brave://`, and the like) are skipped.
+- Other tabs are left alone. Closing the tab clears the toggle.
+
+This is independent of the new-tab theme. You can keep NewTab in light mode and still darken a blinding article.
 
 ## Develop
 
