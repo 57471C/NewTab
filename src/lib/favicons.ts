@@ -6,7 +6,13 @@ function isPrivateHost(hostname: string) {
 	if (cached !== undefined) return cached;
 
 	const host = hostname.toLowerCase();
-	if (host === "localhost" || host.endsWith(".local")) {
+	if (
+		host === "localhost" ||
+		host.endsWith(".local") ||
+		host.endsWith(".lan") ||
+		host.endsWith(".internal") ||
+		host.endsWith(".corp")
+	) {
 		privateCache.set(hostname, true);
 		return true;
 	}
@@ -58,6 +64,15 @@ function hostVariants(hostname: string) {
 	return [...new Set(hosts)];
 }
 
+function pathPrefixes(pathname: string) {
+	const parts = pathname.split("/").filter(Boolean);
+	const prefixes: string[] = [];
+	for (let i = parts.length; i >= 0; i--) {
+		prefixes.push(i === 0 ? "/" : `/${parts.slice(0, i).join("/")}/`);
+	}
+	return prefixes;
+}
+
 function chromeFavicon(pageUrl: string, size = 64) {
 	if (typeof chrome === "undefined" || !chrome.runtime?.id) return null;
 	return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=${size}`;
@@ -65,8 +80,9 @@ function chromeFavicon(pageUrl: string, size = 64) {
 
 export function faviconCandidates(rawUrl?: string, size = 64) {
 	const page = parsePageUrl(rawUrl);
-	if (!page || isPrivateHost(page.hostname)) return [];
+	if (!page) return [];
 
+	const privateHost = isPrivateHost(page.hostname);
 	const origins = hostVariants(page.hostname).map(
 		(host) => `${page.protocol}//${host}`,
 	);
@@ -77,15 +93,24 @@ export function faviconCandidates(rawUrl?: string, size = 64) {
 
 	push(chromeFavicon(page.href, size));
 	for (const origin of origins) {
+		push(chromeFavicon(`${origin}${page.pathname || "/"}`, size));
 		push(chromeFavicon(`${origin}/`, size));
 	}
+
 	for (const origin of origins) {
-		const host = new URL(origin).hostname;
-		push(`https://icons.duckduckgo.com/ip3/${host}.ico`);
-		push(`${origin}/favicon.ico`);
-		push(`${origin}/apple-touch-icon.png`);
-		push(`${origin}/apple-touch-icon-precomposed.png`);
-		push(`https://www.google.com/s2/favicons?domain=${host}&sz=${size}`);
+		for (const prefix of pathPrefixes(page.pathname || "/")) {
+			push(`${origin}${prefix}favicon.ico`);
+			push(`${origin}${prefix}favicon.png`);
+			push(`${origin}${prefix}apple-touch-icon.png`);
+		}
+	}
+
+	if (!privateHost) {
+		for (const origin of origins) {
+			const host = new URL(origin).hostname;
+			push(`https://icons.duckduckgo.com/ip3/${host}.ico`);
+			push(`https://www.google.com/s2/favicons?domain=${host}&sz=${size}`);
+		}
 	}
 
 	return urls;
