@@ -338,7 +338,7 @@ function App() {
 							onClick={() => setIsExpanded(!isExpanded)}
 						/>
 						{isExpanded && (
-							<div className="mt-2 flex flex-col gap-1 overflow-y-auto pr-2 pl-8">
+							<div className="mt-2 flex flex-col gap-1 overflow-y-auto pr-1 pl-2">
 								<button
 									type="button"
 									onClick={handleNewChat}
@@ -350,7 +350,7 @@ function App() {
 								{chatSessions?.map((session) => (
 									<div
 										key={session.id}
-										className={`group flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
+										className={`flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
 											activeChatId === session.id
 												? "bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
 												: "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
@@ -382,7 +382,7 @@ function App() {
 														event.preventDefault();
 														startRename(session.id, session.title);
 													}}
-													className="flex flex-1 items-center gap-2 overflow-hidden outline-none"
+													className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden outline-none"
 												>
 													<MessageSquare size={14} className="flex-shrink-0" />
 													<span className="truncate">{session.title}</span>
@@ -393,7 +393,7 @@ function App() {
 														event.stopPropagation();
 														startRename(session.id, session.title);
 													}}
-													className="flex-shrink-0 opacity-0 outline-none transition-opacity hover:text-zinc-900 group-hover:opacity-100 dark:hover:text-zinc-100"
+													className="flex-shrink-0 rounded p-0.5 text-zinc-400 outline-none hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
 													title="Rename chat"
 												>
 													<Pencil size={12} />
@@ -401,7 +401,7 @@ function App() {
 												<button
 													type="button"
 													onClick={(e) => handleDeleteChat(e, session.id)}
-													className="flex-shrink-0 opacity-0 outline-none transition-opacity hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"
+													className="flex-shrink-0 rounded p-0.5 text-zinc-400 outline-none hover:bg-zinc-200 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-red-400"
 													title="Delete Chat"
 												>
 													<X size={14} />
