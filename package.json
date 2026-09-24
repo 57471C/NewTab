@@ -1,7 +1,7 @@
 {
 	"name": "new-tab",
 	"private": true,
-	"version": "1.0.9",
+	"version": "1.0.10",
 	"type": "module",
 	"scripts": {
 		"icons": "node public/generate-icons.js",
@@ -14,28 +14,21 @@
 		"test": "tsx --test src/**/*.test.ts"
 	},
 	"dependencies": {
-		"@ai-sdk/google": "^3.0.80",
-		"@ai-sdk/openai": "^3.0.68",
 		"@biomejs/biome": "^2.4.16",
-		"ai": "^6.0.197",
-		"autoprefixer": "^10.5.0",
 		"dexie": "^4.4.4",
 		"dexie-react-hooks": "^4.4.0",
 		"lucide-react": "^1.17.0",
-		"postcss": "^8.5.15",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
 		"tailwindcss": "^4.3.0"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "^4.3.0",
-		"@testing-library/react": "^16.3.2",
 		"@types/chrome": "^0.1.43",
 		"@types/node": "^24.12.3",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.1",
-		"fake-indexeddb": "^6.2.5",
 		"globals": "^17.6.0",
 		"tsx": "^4.23.12",
 		"typescript": "~6.0.2",
