@@ -3,11 +3,13 @@ import claudeLogo from "../assets/claude.svg";
 import geminiLogo from "../assets/gemini.svg";
 import grokLogo from "../assets/grok.svg";
 import ollamaLogo from "../assets/ollama.svg";
+import ollamaLogoDark from "../assets/ollama-dark.svg";
 
 export type ChatModel = {
 	label: string;
 	value: string;
 	icon: string;
+	iconDark?: string;
 	invert?: boolean;
 	invertLight?: boolean;
 };
@@ -74,5 +76,6 @@ export const AI_MODELS: ChatModel[] = [
 		label: "Ollama",
 		value: "ollama",
 		icon: ollamaLogo,
+		iconDark: ollamaLogoDark,
 	},
 ];
