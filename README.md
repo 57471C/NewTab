@@ -1,6 +1,6 @@
 # NewTab
 
-Chromium MV3 new-tab extension (v1.0.9). Local-first bookmark grid plus streaming chat against Grok, Gemini, Claude, OpenAI, and optional Ollama. Keys live in `chrome.storage.local`. Chat history and the grid live in Dexie / IndexedDB. Nothing of yours is sent to a backend we run.
+Chromium MV3 new-tab extension (v1.0.10). Local-first bookmark grid plus streaming chat against Grok, Gemini, Claude, OpenAI, and optional Ollama. Keys live in `chrome.storage.local`. Chat history and the grid live in Dexie / IndexedDB. Nothing of yours is sent to a backend we run.
 
 ## Load unpacked
 
@@ -37,11 +37,11 @@ Friends do not need Node. Tag a version from `main`:
 ```bash
 git checkout main
 git pull
-git tag v1.0.9
-git push origin v1.0.9
+git tag v1.0.10
+git push origin v1.0.10
 ```
 
-GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.9.zip` to the Release. They unzip → Load unpacked → the `NewTab` folder. They use their own API keys.
+GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.10.zip` to the Release. They unzip → Load unpacked → the `NewTab` folder. They use their own API keys.
 
 ## What it does
 
