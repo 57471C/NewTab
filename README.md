@@ -1,7 +1,21 @@
 # NewTab
 
 Chromium MV3 new-tab extension. Local-first bookmark grid plus streaming chat via Grok, Gemini, Claude, OpenAI, and optional Ollama.
-API Keys live in `chrome.storage.local`. Chat history and the grid live in Dexie / IndexedDB within the browser. Nothing is stored on any remote server ever.
+API keys live in `chrome.storage.local`. Chat history and the grid live in Dexie / IndexedDB in this browser. Nothing is stored on a remote server we run.
+
+## Install
+
+You do not need Node or Git. Works in Brave, Chrome, and Edge.
+
+1. Open the [latest Release](https://github.com/57471C/NewTab/releases/latest) and download `NewTab-v*.zip`.
+2. Unzip it. You should have a `NewTab` folder that contains `manifest.json`.
+3. Go to `brave://extensions` (or `chrome://extensions` / `edge://extensions`).
+4. Turn on **Developer mode** (top right).
+5. **Load unpacked** → select that `NewTab` folder. Do not select the zip, and do not select a repo checkout.
+
+Add your own API keys in Settings → API keys. Keys stay on this machine.
+
+To update later, download the newer zip, unzip over the same folder (or load the new folder), then click **Reload** on the extension card. If the toolbar icon or new-tab page looks stale, Remove the extension and Load unpacked again.
 
 ## What it does
 
@@ -15,16 +29,18 @@ API Keys live in `chrome.storage.local`. Chat history and the grid live in Dexie
 - Provider 401/404/503 land as short lines, not JSON blobs.
 - Toolbar icon toggles a per-tab invert dark mode (http/https pages only).
 
-## Load unpacked
+## Develop
 
-Works in Brave / Chrome / Edge. Always load **`dist/`**, not the repo root.
+Load **`dist/`**, not the repo root.
 
 ```bash
+git clone https://github.com/57471C/NewTab.git
+cd NewTab
 npm install
 npm run build
 ```
 
-Then `brave://extensions` (or `chrome://extensions`) → Developer mode → Load unpacked → select `dist`.
+Then Developer mode → Load unpacked → select `dist`.
 
 After a pull:
 
@@ -37,13 +53,11 @@ npm run build
 
 `package.json` on the working copy often blocks the pull. Stash that file only; the stash is throwaway.
 
-Reload the card. If the toolbar icon or new-tab page looks stale, Remove + Load unpacked again.
-
-PowerShell does not accept `if exist`. Use `Remove-Item path -ErrorAction SilentlyContinue` if you need to delete a leftover file.
+Reload the card after each build. PowerShell does not accept `if exist`. Use `Remove-Item path -ErrorAction SilentlyContinue` if you need to delete a leftover file.
 
 If chat or grid Save throws `DatabaseClosedError` / `DataError`, DevTools → Application → IndexedDB → delete `NewTabDatabase` → reload. API keys survive that; they are not in Dexie.
 
-## Share a build
+### Share a build
 
 Friends do not need Node. Tag a version from `main`:
 
@@ -54,9 +68,9 @@ git tag v1.0.10
 git push origin v1.0.10
 ```
 
-GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.10.zip` to the Release. They unzip → Load unpacked → the `NewTab` folder. They use their own API keys.
+GitHub Actions builds `dist`, zips it, and attaches `NewTab-v1.0.10.zip` to the Release.
 
-## Scripts
+### Scripts
 
 | Script | Why |
 | --- | --- |
