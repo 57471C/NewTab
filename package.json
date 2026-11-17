@@ -42,5 +42,8 @@
 	"bugs": {
 		"url": "https://github.com/57471C/NewTab/issues"
 	},
-	"homepage": "https://github.com/57471C/NewTab#readme"
+	"homepage": "https://github.com/57471C/NewTab#readme",
+	"allowScripts": {
+		"esbuild@0.28.2": true
+	}
 }
